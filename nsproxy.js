@@ -78,12 +78,20 @@ var nsproxy = Base.extend({
 	},
 	fetch_real_dlink:function(item, callback){
 		var fetch_by_net = function(dlink, _cb){
+			var ua = null;
+			if(item.hasOwnProperty('ua') && item.ua){
+				ua = item.ua;
+			}
+			var _options = {};
+			if(ua){
+				_options['ua'] = ua;
+			}
 			service.server_get_header(dlink, (err, code, header)=>{
 				console.log("header:", header);
 				if(!err){
 					if(_cb)_cb(code, header);
 				}
-			});
+			}, _options);
 		}
 		var try_cnt = 0;
 		var to_fetch = (dlink, cb)=>{
@@ -93,15 +101,23 @@ var nsproxy = Base.extend({
 					var loc = header.location;
 					to_fetch(loc, cb);
 				} else {
-					if(code >= 400 && try_cnt <= 3){
+					if(code >= 400 && try_cnt <= 50){
 						try_cnt = try_cnt + 1;
-						setTimeout(()=>{to_fetch(dlink, cb);}, 300);
+						var dl = try_cnt * 1000;
+						if(dl>8000)dl=8000;
+						setTimeout(()=>{to_fetch(dlink, cb);}, 1000);
 					} else if(code == 200){
 						var contentType = header['content-type'];
 						item.dlink = dlink; 
 						item['type'] = contentType;
+						var accept_ranges = header['accept-ranges'];
+						var content_length = header['content-length'];
+						if(content_length){
+							content_length = parseInt(content_length);
+						}
+						var params = {rdlink:dlink, type:contentType, length:content_length, ranges:accept_ranges}
 						if(cb){
-							cb(true);
+							cb(true, params);
 						}
 					} else {
 						if(cb){
@@ -115,8 +131,8 @@ var nsproxy = Base.extend({
 			});
 		};
 		var dlink = item.dlink;
-		to_fetch(dlink, (success)=>{
-			callback(success, item);
+		to_fetch(dlink, (success, params)=>{
+			callback(success, item, params);
 		});
 	},
 	fetch_file_info:function(item_id, callback){

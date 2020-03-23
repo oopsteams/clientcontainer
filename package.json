@@ -20,7 +20,8 @@
     "jquery": "3.4.1",
     "lowdb": "1.0.0",
     "request": "2.88.0",
-    "sqlite3": "^4.1.0"
+    "sqlite3": "^4.1.0",
+    "tar": "^6.0.1"
   },
   "devDependencies": {
     "electron": "5.0.13",
@@ -34,11 +35,13 @@
     "forge": {
       "packagerConfig": {
         "icon": "Icon",
-        "titlebarAppearsTransparent": "YES"
+        "titlebarAppearsTransparent": "YES",
+        "asar": true,
+        "overwrite": true
       },
-	  "startConfig":{
-		  "icon": "Icon"
-	  },
+      "startConfig": {
+        "icon": "Icon"
+      },
       "makers": [
         {
           "name": "@electron-forge/maker-squirrel"

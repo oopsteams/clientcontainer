@@ -1,5 +1,4 @@
 const { BrowserWindow, ipcMain} = require('electron');
-const logger = require('electron-log');
 const cfg = require('electron-cfg');
 const helpers = require("./helper.core.js");
 const Base = require("./base.js")
@@ -39,7 +38,7 @@ var window_helper = Base.extend({
 	send:function(args){
 		var self = this;
 		if(self.win){
-			console.log('will send message:', self.msg_point_front, ',args tag:', args.tag);
+			// console.log('will send message:', self.msg_point_front, ',args tag:', args.tag);
 			self.win.webContents.send(self.msg_point_front, args);
 			return true;
 		}
@@ -93,7 +92,7 @@ var window_helper = Base.extend({
 			  // titleBarStyle:'hidden',
 			  webPreferences: {
 			    nodeIntegration: true,
-			    webSecurity: false,
+			    // webSecurity: false,
 			    allowRunningInsecureContent: true,
 				preload: path.join(__dirname, self.renderer)
 			  }
@@ -125,7 +124,14 @@ var window_helper = Base.extend({
 		};
 		this.win.webContents.openDevTools();
 		ipcMain.on(self.msg_point, self.win_listener);
-		this.win.loadURL(self.load_url, {"userAgent": "pc;pc-mac;10.13.6;macbaiduyunguanjia"});
+		this.win.loadURL(self.load_url, {
+			"userAgent": "pc;pc-mac;10.13.6;macbaiduyunguanjia",
+			"httpReferrer": "http://www.oopsteam.site/",
+			"extraHeaders": "Referer: http://www.oopsteam.site\n"
+		});
+		// this.win.loadURL(self.load_url, {
+		// 	"httpReferrer": "http://www.oopsteam.site/"
+		// });
 	}
 });
 module.exports = window_helper;

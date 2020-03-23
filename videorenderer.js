@@ -3,6 +3,7 @@ console.log('remote:',remote)
 if(remote){
 	var triggered_tags = {};
 	function send_message(payload){
+		console.log('send_message:', payload, ',msgPoint:', window.global_context.msgPoint);
 		ipcRenderer.send(window.global_context.msgPoint, payload);
 	}
 	function check_st(v){
@@ -16,14 +17,12 @@ if(remote){
 		var tag = args.tag;
 		if("start" == tag){
 			if(check_st(1)){
-				update_st(2);
+				var sources = args.sources;
+				
 				args.tag = 'started';
 				var rs = args.rs;
 				window.global_context.point = args.point;
-				window.global_context.lg_rs=args.lg_rs;
-				window.global_context.user=rs;
 				var params = [rs];
-				// console.log('trigger start:', params);
 				trigger("start", params);
 				trigger("login", params);
 				send_message(args);
@@ -85,6 +84,7 @@ if(remote){
 		'init':init,
 		'listeners':{},
 		'send':send_message,
-		'addListener':addListener
+		'addListener':addListener,
+		'player': null
 	};
 }

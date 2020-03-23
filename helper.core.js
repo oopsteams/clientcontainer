@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const tar = require('tar');
+
 const ERR_CODES_MAP = {1:'需要先登录!', 2:'参数错误!', 3:'未知错误!'};
 var helpers = {
 	// point:"http://192.168.0.101:8080/",
@@ -7,8 +9,27 @@ var helpers = {
 	// point:"https://www.oopsteam.site/",
 	points:['http://127.0.0.1:8080/', 'https://www.oopsteam.site/', 'http://www.oopsteam.site/', 'http://111.229.193.232:8080/', 'http://111.229.193.232/'],
 	data_dir_name:".datas",
+	app_data_dir_name:".oopsteam",
+	download_dir_name:"download",
+	patch_dir_name:"patch",
 	log_dir_name:"logs",
-	token_timeout:7*24*60*60*1000,
+	common_user_agent:'pan.baidu.com',
+	devices:['pc-mac','macos1','cccone','levis','susy', 'win', 'win1'],
+	token_timeout:10*24*60*60*1000+1,
+	min_thread_num:3,
+	build_percentage:function (part_val, total){
+		var s = ''+Math.round((part_val/total) * 1000)/10;
+		if(s.length == 1){
+			s = ' '+s+'.0';
+		} else if(s.length == 2){
+			if(s.indexOf('.')>=0){
+				s = ' '+s;
+			} else {
+				s = s+'.0';
+			}
+		}
+	  return s;
+	},
 	noop: function() {},
 	error_codes:function(code){
 		if(ERR_CODES_MAP.hasOwnProperty(code)){
@@ -210,14 +231,13 @@ var helpers = {
 			}
 		};
 		if(!data_list || data_list.length == 0){
-			action(null, 0, (comeon)=>{
-				final_call(false, -1);
-			});
+			final_call(true, -1);
 			return;
 		}
 		var to_action = (pos)=>{
 			if(pos >= data_list.length){
 				final_call(true, pos);
+				return;
 			}
 			var item = data_list[pos];
 			if(action && typeof action.call === 'function'){
@@ -333,6 +353,21 @@ var helpers = {
 	  };
 	  return _looper;
 	})(),
+	remove_dir:function(dir_path){
+		var files = [];
+		if(fs.existsSync(dir_path)){
+			files = fs.readdirSync(dir_path);
+			files.forEach((file, idx)=>{
+				var cpath = path.join(dir_path, file);
+				if(fs.statSync(cpath).isDirectory()){
+					helpers.remove_dir(cpath);
+				} else {
+					fs.unlinkSync(cpath);
+				}
+			});
+			fs.rmdirSync(dir_path);
+		}
+	},
 	append_merge_files:function(files, final_file, callback){
 		// var _files = JSON.parse(JSON.stringify(files));
 		if(files.length == 1){
@@ -469,6 +504,41 @@ var helpers = {
 		  });
 		}
 		cb();
+	},
+	opengzip:function(zippath, target_dir, callback){
+		// fs.createReadStream(zippath).pipe(
+		//   tar.x({
+		//     strip: 1,
+		//     C: target_dir // alias for cwd:'some-dir', also ok
+		//   }, null, callback)
+		// )
+		
+		tar.x({
+			file: zippath,
+		  strip: 1,
+		  C: target_dir // alias for cwd:'some-dir', also ok
+		}, null, callback)
+		
+		
+		// var gunzip = zlib.createGunzip();
+		// var inflate = zlib.createInflate();
+		// var inFile = fs.createReadStream(zippath);
+		// var outFile = fs.createWriteStream(target_dir);
+		// inFile.pipe(gunzip).pipe(outFile);
+		// inFile.pipe(inflate).pipe(outFile);
+		// callback(false, true);
+		// if(fs.existsSync(zippath)){
+		// 	var extract = unzip.Extract({path: target_dir});
+		// 	extract.on('finish', function(){
+		// 		callback(false, true);
+		// 	});
+		// 	extract.on('error', (err)=>{
+		// 		callback(err, false)
+		// 	});
+		// 	fs.createReadStream(zippath).pipe(extract);
+		// } else {
+		// 	callback('can not find zip file!', false);
+		// }
 	}
 };
 module.exports = helpers;

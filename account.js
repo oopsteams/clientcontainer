@@ -94,7 +94,6 @@ var account = Base.extend({
 			final_call();
 		} else {
 			accounts_db.get(null, null, (user)=>{
-				// console.log("account user:", user);
 				if(!user || !user['id']||helpers.now() - user['tm']>helpers.token_timeout){
 					console.log('callback:',callback);
 					//createLoginWindow(point, parent_win, callback);
@@ -128,7 +127,9 @@ var account = Base.extend({
 				if(token){
 					self.user = {id: token, tm:login_at, "username":username, "portrait":portrait, "fuzzy_id":fuzzy_id};
 					// accounts_db.get('accounts').assign({token: token, tm:helpers.now()}).write();
-					var msg = {'logined':true, 'id':fuzzy_id, 'tk':self.user.id, 'username':self.user.username, 'portrait':self.user.portrait};
+					var msg = {'logined':true, 'id':fuzzy_id, 
+					'tk':self.user.id, 'username':self.user.username, 
+					'portrait':self.user.portrait, 'tm':helpers.now()};
 					accounts_db.put(self.user, (params)=>{
 							callback(true, msg);
 						});

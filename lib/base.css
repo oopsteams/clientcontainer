@@ -1,0 +1,35 @@
+body{
+	margin: 0 0;
+	padding: 0 0;
+	display:-webkit-flex;
+	display: flex;
+	flex-direction: column;
+}
+.container{
+	font-family: Helvetica, sans-serif;
+	text-align: center;
+	display:-webkit-flex;
+	display: flex;
+	flex-direction: column;
+}
+.my-header{
+	height: 2.5rem;
+	line-height: 2.5rem;
+	text-align: left;
+	top: 0px;
+	-webkit-app-region: drag;
+	pointer-events:none;
+}
+.my-logo{
+	margin-right: 0.625rem;
+	height: 2rem;
+	width: 2rem;
+	float: right;
+	right: 0.625rem;
+	vertical-align: middle;
+}
+.my-body{
+	display:-webkit-flex;
+	display: flex;
+	flex-direction: column;
+}
