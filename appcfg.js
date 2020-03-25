@@ -179,12 +179,13 @@ var appcfg = Base.extend({
 		console.log(CFG_SYNC_TM+' v:', v)
 		if(helpers.now() - v>CFG_SYNC_DELAY){
 			// self.update(CFG_SYNC_TM, helpers.now(), CFG_SYNC_TM);
+			console.log('will call service!');
 			//call service
 			service.check_service(self.points, (point, app_cfg)=>{
 				if(point){
 					helpers.point = point;
-					console.log('helpers point:', helpers.point);
 				}
+				console.log('helpers point:', helpers.point);
 				if(app_cfg){
 					var next_up = (c, cb)=>{
 						console.log('update key:', c.key, ',val:', c.val, ',n:', c.name);
