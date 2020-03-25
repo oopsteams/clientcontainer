@@ -39,13 +39,6 @@ var cookies = Base.extend({
 	},
 	init:function(win, callback){
 		var self = this;
-		//load init cookies
-		// session.defaultSession.cookies.set(cookie, (error)=>{
-		// 	if(error){
-		// 		self.log(error);
-		// 	}
-		// 	self._listen();
-		// });
 		var final_call = ()=>{
 			if(callback){
 				callback();
@@ -59,7 +52,7 @@ var cookies = Base.extend({
 					// console.log('will set cookie:', c);
 					win.webContents.session.cookies.set(c, (err)=>{
 						if(err){
-							console.log('cookies set err:', err);
+							self.log('cookies set err:', err);
 						}
 						cb(true);
 					});
@@ -181,7 +174,7 @@ var cookies = Base.extend({
 			self.changed = true;
 			self.update_cookie();
 		});
-		self.log('log:','ok');
+		// self.log('log:','ok');
 	},
 	// log:function(){
 	// 	var _args = [];
