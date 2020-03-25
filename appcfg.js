@@ -214,6 +214,8 @@ var appcfg = Base.extend({
 					}, (iscomplete, idx)=>{
 						final_call();
 					});
+				} else {
+					final_call();
 				}
 			});
 		} else {
