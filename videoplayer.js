@@ -50,7 +50,6 @@ var videoplayer = Base.extend({
 				'cfg': self.cfg,
 				win:win_option
 			});
-			
 		}
 	},
 	open:function(task){

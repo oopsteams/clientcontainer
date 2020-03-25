@@ -3,10 +3,9 @@ const request = require('request');
 const Base = require("./base.js")
 const Dao = require('./dao.js')
 const BdClient = require('./bd_client.js')
+const BdAccount = require('./bdaccount.js')
 var path = require('path');
 const os =  require('os');
-var base_dir = os.homedir();
-var data_dir = path.join(base_dir, helpers.data_dir_name);
 var accounts_db = new Dao({'type':'object', 'name':'accounts',
 'fields':[{name:"id", type:'VARCHAR', len:130},
 	{name:"default_save_path", type:'VARCHAR', len:512},
@@ -75,9 +74,11 @@ function call_pansite_by_post(point, path, params, callback){
 }
 var account = Base.extend({
 	constructor:function(options){
+		this.options = options;
 		this.parent = options?options.parent:null;
 		this.point = options?options.point:null;
 		this.user = null;
+		this.bdaccount = null;
 	},
 	check_state:function(callback){
 		var self = this;
@@ -111,62 +112,78 @@ var account = Base.extend({
 	clear_token:function(cb){
 		accounts_db.del_all(cb);
 	},
+	bdlogin:function(auth, callback){
+		var self = this;
+		if(!self.bdaccount){
+			self.bdaccount = new BdAccount(auth, self, 
+			{'cfg': self.options.cfg, 'point':self.point, 'logger':self.options.logger, 'cookies':self.options.cookies});
+			self.bdaccount.init();
+		}
+		self.bdaccount.open((json_obj)=>{
+			if(json_obj){
+				token = json_obj['token'];
+				fuzzy_id = json_obj['id'];
+				login_at = json_obj['login_at']
+				username = json_obj['username'];
+				portrait = json_obj['portrait'];
+				var final_call = ()=>{
+					if(token){
+						self.user = {id: token, tm:login_at, "username":username, "portrait":portrait, "fuzzy_id":fuzzy_id};
+						// accounts_db.get('accounts').assign({token: token, tm:helpers.now()}).write();
+						var msg = {'logined':true, 'id':fuzzy_id, 
+						'tk':self.user.id, 'username':self.user.username, 
+						'portrait':self.user.portrait, 'tm':helpers.now()};
+						accounts_db.put(self.user, (params)=>{
+								if(callback)callback(true, msg);
+							});
+					} else {
+						if(callback)callback(false, {});
+					}
+				};
+				final_call();
+			} else {
+				if(callback)callback(false, {});
+			}
+		});
+	},
 	login:function(user, callback){
 		var self = this;
 		call_pansite_by_post(this.point, "login/", {"mobile_no": user.username, "password": user.pass}, function(res){
 			var json_obj = res;
-			need_renew_access_token = json_obj['need_renew_access_token'];
-			auth_redirect = json_obj['auth'];
-			token = json_obj['token'];
-			fuzzy_id = json_obj['id'];
-			login_at = json_obj['login_at']
-			username = json_obj['username'];
-			portrait = json_obj['portrait'];
-			console.log('json_obj:', json_obj);
-			var final_call = ()=>{
-				if(token){
-					self.user = {id: token, tm:login_at, "username":username, "portrait":portrait, "fuzzy_id":fuzzy_id};
-					// accounts_db.get('accounts').assign({token: token, tm:helpers.now()}).write();
-					var msg = {'logined':true, 'id':fuzzy_id, 
-					'tk':self.user.id, 'username':self.user.username, 
-					'portrait':self.user.portrait, 'tm':helpers.now()};
-					accounts_db.put(self.user, (params)=>{
-							callback(true, msg);
-						});
-				} else {
-					callback(false, {});
-				}
-			};
-			if(need_renew_access_token){
-				pan_acc_list = json_obj.pan_acc_list;
-				pan_acc_list.forEach((pa, idx)=>{pa['token'] = token});
-				// check_access.loop_check_accounts(token, point, pan_acc_list, auth_redirect, parent_win, (isok)=>{
-				// 	if(token){
-				// 		accounts_db.put({id: token, tm:helpers.now()}, (params)=>{
-				// 			callback(isok);
-				// 		});
-				// 	} else {
-				// 		if(!isok){
-				// 			api.check_state(point, parent_win, callback);
-				// 		} else {
-				// 			callback(isok);
-				// 		}
-				// 	}
-				// });
+			if(json_obj){
+				need_renew_access_token = json_obj['need_renew_access_token'];
+				auth_redirect = json_obj['auth'];
+				token = json_obj['token'];
+				fuzzy_id = json_obj['id'];
+				login_at = json_obj['login_at']
+				username = json_obj['username'];
+				portrait = json_obj['portrait'];
+				console.log('json_obj:', json_obj);
+				var final_call = ()=>{
+					if(token){
+						self.user = {id: token, tm:login_at, "username":username, "portrait":portrait, "fuzzy_id":fuzzy_id};
+						// accounts_db.get('accounts').assign({token: token, tm:helpers.now()}).write();
+						var msg = {'logined':true, 'id':fuzzy_id, 
+						'tk':self.user.id, 'username':self.user.username, 
+						'portrait':self.user.portrait, 'tm':helpers.now()};
+						accounts_db.put(self.user, (params)=>{
+								callback(true, msg);
+							});
+					} else {
+						callback(false, {});
+					}
+				};
 				final_call();
 			} else {
-				final_call();
+				callback(false, {});
 			}
 			
-			// if(isok){
-			// 	callback(true);
+			// if(need_renew_access_token){
+			// 	pan_acc_list = json_obj.pan_acc_list;
+			// 	pan_acc_list.forEach((pa, idx)=>{pa['token'] = token});
+			// 	final_call();
 			// } else {
-			// 	if(res['state'] == -1){
-			// 		callback(false);
-			// 		api.check_state(point, callback);
-			// 	} else if(res['state'] == 0){
-			// 		callback(true);
-			// 	}
+			// 	final_call();
 			// }
 		});
 	},

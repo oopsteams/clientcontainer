@@ -15,14 +15,71 @@ var app_cfg_db = new Dao({'type':'list', 'name':'app_cfg',
 });
 const CFG_SYNC_DELAY = 24*60*60*1000;
 const CFG_SYNC_TM = 'cfg_sync_tm';
-const c_dir = __dirname;
 var appcfg = Base.extend({
-	constructor:function(options){
+	constructor:function(download_dir, options){
 		this.points = options?options.points:helpers.points;
+		this.options = options;
+		this.base_dir = download_dir;
+		this.core_loading = false;
+		this.upgrade_task = {'libpath':null, 'size':0, 'end': false, 'st':0, 'errmsg':null, 'err':null};
+		this.infos = [];
 		this.cfg = {};
+	},
+	check_upgrade_info:function(callback){
+		var self = this;
+		var rs = [];
+		
+		var final_call = (rs)=>{
+			var appver = self.get('appver');
+			var appupurl = self.get('appupurl');
+			var current_app_versions = self.options.version;
+			if(current_app_versions != appver){
+				var prefix_msg = '';
+				if(rs.length>0){
+					prefix_msg = rs[0].msg + '|';
+				}
+				var info = rs[0]
+				rs[0] = {'msg':prefix_msg+'发现新版本App,请通过链接下载更新!', 'url':appupurl, 'type':'a'};
+			}
+			if(callback){
+				callback(rs);
+			}
+		}
+		// console.log('upgrade_task:', self.upgrade_task);
+		if(self.upgrade_task.st == 1){
+			var msg = "正在下载最新系统内核,请不要退出应用![0.1%]";
+			var new_prod_dir_lib = self.upgrade_task.libpath;
+			var size = self.upgrade_task.size;
+			if(fs.existsSync(new_prod_dir_lib)){
+				fs.stat(new_prod_dir_lib,(err, stats)=>{
+					var get_size = stats.size;
+					var prog_val = helpers.build_percentage(get_size/1024, size);
+					msg = "正在下载最新系统内核,请不要退出应用!["+prog_val+"%]";
+					rs.push({'msg':msg, 'task':self.upgrade_task});
+					final_call(rs);
+				});
+			} else {
+				rs.push({'msg':msg, 'task':self.upgrade_task});
+				final_call(rs);
+			}
+		} else if(self.upgrade_task.st == 2){
+			var msg = null;
+			var err = self.upgrade_task.err;
+			if(err){
+				msg = self.upgrade_task.errmsg;
+			} else {
+				msg = "最新系统内核下载完成!";
+			}
+			rs.push({'msg':msg, 'task':self.upgrade_task});
+			final_call(rs);
+		} else {
+			final_call(rs);
+		}
+		return rs;
 	},
 	check_upgrade:function(callback){
 		var self = this;
+		var c_dir = this.base_dir;
 		var old_ver_val = self.get('old_version');
 		var new_ver_val = self.get('version');
 		console.log('check_upgrade old_ver_val:', old_ver_val, ',new_ver_val:',new_ver_val);
@@ -30,47 +87,87 @@ var appcfg = Base.extend({
 			console.log('need_to_load new lib!!!!');
 			var upurl = self.get('upurl');
 			if(upurl.substring(upurl.length-1) != '/') upurl+='/';
-			// var lib_url = upurl + 'v'+new_ver_val+'.zip';
 			var lib_url = upurl + 'v'+new_ver_val+'.tar.gz';
 			console.log('need_to_load new lib!!!!', lib_url);
 			var new_core_dir = 'prod';
 			var tmp_unzip_dir = path.join(c_dir, 'tmp');
-			// var new_prod_dir = path.join(c_dir, new_core_dir);
-			// var new_prod_dir_lib = path.join(c_dir, 'v'+new_ver_val+'.zip');
+			var new_prod_dir = path.join(c_dir, new_core_dir);
 			var new_prod_dir_lib = path.join(c_dir, 'v'+new_ver_val+'.tar.gz');
-			
-			if(fs.existsSync(new_prod_dir_lib)){
-				//self.update('old_version', new_ver_val, 'old ver');
-				helpers.opengzip(new_prod_dir_lib, tmp_unzip_dir, ()=>{
-					if(arguments){
-						console.log('opengzip arguments:', arguments);
-					} else {
-						
-					}
-				});
+			var final_call = ()=>{
+				self.infos = [];
+				if(callback){
+					callback();
+				}
+			};
+			var final_deal = ()=>{
+				if(fs.existsSync(tmp_unzip_dir)){
+					helpers.remove_dir(tmp_unzip_dir);
+				}
+				if(!fs.existsSync(tmp_unzip_dir)){
+					fs.mkdirSync(tmp_unzip_dir);
+				}
+				if(fs.existsSync(new_prod_dir_lib)){
+					//self.update('old_version', new_ver_val, 'old ver');
+					helpers.opengzip(new_prod_dir_lib, tmp_unzip_dir, (rs)=>{
+						console.log('opengzip rs:', rs);
+						var prod_index_fp = path.join(tmp_unzip_dir, 'prod/index.html');
+						if(fs.existsSync(prod_index_fp)){
+							fs.renameSync(path.join(tmp_unzip_dir, 'prod'), new_prod_dir);
+							if(fs.existsSync(path.join(new_prod_dir, 'index.html'))){
+								self.update('old_version', new_ver_val, 'old ver');
+								fs.unlinkSync(new_prod_dir_lib);
+								final_call();
+							} else {
+								final_call();
+							}
+						} else {
+							final_call();
+						}
+					});
+				} else {
+					final_call();
+				}
 			}
-			
-		   /*
+		   var ver_obj = self.cfg['version'];
+		   this.core_loading = true;
+		   var size = 526;
+		   var t = ver_obj.type;
+		   if(t){
+			   var _size = parseInt(t);
+			   if(_size && _size>0){
+				   size = _size;
+			   }
+		   }
+		   self.upgrade_task.st = 1;
+		   self.upgrade_task.libpath = new_prod_dir_lib;
+		   self.upgrade_task.size = size;
+		   self.upgrade_task.errmsg = null;
+		   self.upgrade_task.err = null;
 			service.download_lib_file(new_prod_dir_lib, lib_url, (err, fpath)=>{
 				console.log('fpath:', fpath);
 				if(!err && fpath){
+					self.core_loading_err = null;
 					if(fs.existsSync(fpath)){
 						//self.update('old_version', new_ver_val, 'old ver');
 						console.log('download ok!!!');
+						setTimeout(()=>{final_deal();},1000);
 					} else {
 						console.log('can not find lib, ', fpath);
 					}
-					
-					if(callback){
-						callback();
-					}
+				} else {
+					self.upgrade_task.errmsg = '内核下载失败!';
+					self.upgrade_task.err = err;
 				}
+				self.upgrade_task.st = 2;
+				this.core_loading = false;
 			});
-			*/
+			
+		} else {
+			if(callback){
+				callback();
+			}
 		}
-		if(callback){
-			callback();
-		}
+		
 	},
 	_sync:function(callback){
 		var self = this;
@@ -93,11 +190,15 @@ var appcfg = Base.extend({
 						console.log('update key:', c.key, ',val:', c.val, ',n:', c.name);
 						self.update(c.key, c.val, c.name, ()=>{
 							cb(true);
-						});
+						}, c.type);
 					}
 					helpers.iterator(app_cfg, (c, idx, cb)=>{
 						if(c.key == 'version'){
 							var old_ver_val = self.get('version');
+							if(!old_ver_val){
+								old_ver_val = self.options.version;
+							}
+							console.log('关键参数 不存在则使用app version, old_ver_val:', old_ver_val);
 							if(old_ver_val != c.val){
 								self.update('old_version', old_ver_val, 'old ver', ()=>{
 									//skip
@@ -120,6 +221,7 @@ var appcfg = Base.extend({
 	},
 	init:function(cb){
 		var self = this;
+		var c_dir = this.base_dir;
 		var final_call = function(){
 			var core_dir = '_prod';
 			var new_core_dir = 'prod';
@@ -135,8 +237,12 @@ var appcfg = Base.extend({
 					//del tmp_prod_dir
 					helpers.remove_dir(tmp_prod_dir);
 				}
-				fs.renameSync(prod_dir, tmp_core_dir);
-				fs.renameSync(new_prod_dir, prod_dir);
+				if(fs.existsSync(prod_dir)){
+					fs.renameSync(prod_dir, tmp_prod_dir);
+				}
+				if(fs.existsSync(path.join(new_prod_dir, 'index.html'))){
+					fs.renameSync(new_prod_dir, prod_dir);
+				}
 			}
 			if(fs.existsSync(prod_dir)){
 				if(fs.existsSync(prod_index_addr)){
@@ -164,8 +270,8 @@ var appcfg = Base.extend({
 			final_call();
 		});
 	},
-	update:function(key, val, name, callback){
-		var p = this.__update(key, val, name);
+	update:function(key, val, name, callback, type){
+		var p = this.__update(key, val, name, null, type);
 		if(p){
 			app_cfg_db.get('id', key, (_p)=>{
 				if(_p){
@@ -204,7 +310,7 @@ var appcfg = Base.extend({
 		p['id'] = key;
 		p['val'] = val;
 		p['tm'] = tm;
-		if(type){
+		if(type && 'null' !== type){
 			p['type'] = type;
 		}
 		if(name){
@@ -217,6 +323,12 @@ var appcfg = Base.extend({
 			return this.cfg[key]['val'];
 		} else if(helpers.hasOwnProperty(key)){
 			return helpers[key];
+		}
+		return null;
+	},
+	getObj:function(key){
+		if(this.cfg.hasOwnProperty(key)){
+			return this.cfg[key];
 		}
 		return null;
 	},

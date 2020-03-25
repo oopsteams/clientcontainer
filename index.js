@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, session} = require('electron');
+const { app, BrowserWindow, nativeImage, Tray, Menu, ipcMain, session} = require('electron');
 const unhandled = require('electron-unhandled');
 const logger = require('electron-log');
 const cfg = require('electron-cfg');
@@ -57,10 +57,30 @@ function interceptHttp(){
 	  callback({requestHeaders: headers});
 	})
 }
+var lock_contact_btn = false;
+var contact_reply = function(args){
+	var self = this;
+	var cmd = args.cmd;
+	if('invited' == cmd){
+		
+	}
+	lock_contact_btn = false;
+	// console.log('unlock btn!!!');
+}
+var cfg_action = function(args){
+	var self = this;
+	var cmd = args.cmd;
+	if('state' == cmd){
+		self.options.cfg.check_upgrade_info((rs)=>{
+			// console.log('cfg state!!!!!!!!,rs:', rs);
+			self.send({'tag':'cfg', 'datas': rs, 'cmd':args.cmd});
+		});
+	}
+};
 var task_action = function(args){
 	var self = this;
-	cmd = args.cmd;
-	console.log('task_action cmd:', cmd);
+	var cmd = args.cmd;
+	// console.log('task_action cmd:', cmd);
 	if('resume' == cmd){
 		self.options.nsloader.resume(args.id, ()=>{
 			console.log('resume reply!!!!!!!!');
@@ -110,28 +130,9 @@ var file_action = function(args){
 				self.send({'tag':'tree', 'id':args.id, 'data': rs, 'cmd':args.cmd});
 			});
 		}, 2000);
-	} else if("copy" == cmd){
-		var data = args.data;
-		console.log("file copy:", data);
-		self.account.check_state((isok, rs)=>{
-			service.server_get(rs.tk, 'product/checkcopyfile', data, (err, raw)=>{
-				if(!err){
-					var body = JSON.parse(raw);
-					var st = body.state;
-					if(st == -2){
-						//需要先绑定baidu账号
-					}else if(st == -1){
-						//弹出异常信息
-					}else if(st == 0){
-						//success
-					}
-					console.log("raw:", raw);
-				}
-			});
-		});
 	} else if("download" == cmd){
 		var data = args.data;
-		console.log("file download:", data);
+		// console.log("file download:", data);
 		self.options.nsloader.new_download_ready(data, (fail, rs)=>{
 			self.send({'tag':'tree', 'id':args.id, 'data': rs, 'fail': fail, 'cmd':"download"});
 		});
@@ -154,6 +155,7 @@ var win_option = {
 				args['lg_rs'] = isok
 				args['rs'] = rs
 				args['point'] = helpers.point;
+				args['version'] = self.options.version;
 				self.send(args);
 			});
 		} else if("started" == tag){
@@ -176,27 +178,45 @@ var win_option = {
 			download_action.apply(self, [args]);
 		} else if('prog' == tag){
 			task_action.apply(self, [args]);
+		} else if('cfg' == tag){
+			cfg_action.apply(self, [args]);
+		} else if('contact' == tag){
+			console.log('contact msg:', args);
+			contact_reply.apply(self, [args]);
+		} else if('bdlogin' == tag){
+			var auth = args.auth;
+			self.account.bdlogin(auth, (logined, rs)=>{
+				args.rs = rs
+				args.tag = 'login';
+				self.send(args);
+			});
 		}
 	},
 	onDestroy:function(win){
+		
 		on_quit_app();
 		app.quit();
 	}
 }
+var contact_action = null;
 const template = [
 	{
 	  label: '增值服务',
 	  submenu: [
 	    { type: 'separator' },
-	    {label: '加入会员', click: ()=>{alert("请联系管理员!");}},
-	    {label: '申请代理', click: ()=>{alert("代理联系方式!");}}
+	    {label: '加入会员', click: ()=>{if(contact_action)contact_action("可索取全部资源!");}},
+	    {label: '申请代理', click: ()=>{if(contact_action)contact_action("可索取全部资源,可发展会员!");}}
 	  ]
 	},
     {
       label: 'Help',
       submenu: [
-        { role: 'toggledevtools' },
-        { type: 'separator' },
+        // { role: 'toggledevtools' },
+        // { type: 'separator' },
+		{ role: 'cut' },
+		{ role: 'copy' },
+		{ role: 'paste' },
+		{ type: 'separator'},
         { role: 'quit' }
       ]
     }
@@ -221,35 +241,61 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+let tray = null;
+function build_tray(){
+	const icon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAAsSAAALEgHS3X78AAABvElEQVQ4y4XUu2tUQRQG8N/u3s0aXR+QSsVHK4K96SRgCvHRCIGIYILiI+BfYWWthbHzCeILLVTEwkKtBQshopjKQsOKD4yrazGzeB3uHT8YLnPuN9/MmfOdaWAaR3AJPaxAEy0M4viCQ/iNWxiN/9v+ooE1YnAHxtRjExYxJ4+5Aj/xsrTLoIJ4HK+wkBEbx0QzCVaJTWItLmN9RvAUHjfl0cJp3MYHFDW8SazG1f8JzuAjXmALvlVwmkJRb2IpJ7gOUziPrzHtHxW8PViFe0P13J0s4HlMvcBywhkVbHcNn2TuZDsmMBvnI+jgV8LbL/j2Rjn/FA2cwBO8LcXbgrGH6OIALgrWqxUcx1acSzZp+9dW++Kd3k8rlGIWd7GUCBbox3krCl5PF6eCe4V+vJLEh307TPkwvuNBTrCLk0JHpH4r4ugJlZ0SKjvICc4I3XCn4hqacfEiDsbvIzVE2ChY4IJqjOAzNmB3zEJO8Bhe41mG9x674umeymCb4LnNGU4HZ/EwnrKMRkqeF4pBqGSVlVbiHc7UbDiGnegUwivyRujdruC1foncjwt6wiNxVGi3vlCo5bhuGvN/AMd/Wh7S3ewfAAAAAElFTkSuQmCC');
+	tray = new Tray(icon)
+	const contextMenu = Menu.buildFromTemplate([
+	  { label: '退出',click: ()=>{app.quit();}},
+	  { label: '版本:'+app.getVersion()}
+	])
+	tray.setToolTip('IP资源众筹')
+	tray.setContextMenu(contextMenu)
+}
 app.on('ready', ()=>{
-	menu = Menu.buildFromTemplate(template)
+	menu = Menu.buildFromTemplate([{ role: 'quit' }]);
 	Menu.setApplicationMenu(menu);
+	build_tray();
 	var looper = helpers.looper;
+	var app_version = app.getVersion();
 	console.log('db data_dir:', data_dir);
 	dao.initDatabase(data_dir, looper, ()=>{
 		const Account = require('./account.js');
 		const Nsproxy = require('./nsproxy.js');
 		const Nsloader = require('./nsloader.js');
 		const AppCfg = require("./appcfg.js");
+		const Cookies = require('./cookies.js');
+		
 		console.log("hn:",os.hostname());
-		var appcfg = new AppCfg();
+		var appcfg = new AppCfg(patch_data_dir,{'version': app_version});
 		appcfg.init((cfg)=>{
 			interceptHttp();
+			var cookies = new Cookies({'cfg': appcfg, 'logger': logger});
 			var final_call = ()=>{
 				looper.start();
 				var point = appcfg.get('point');
-				var account = new Account({'point': point, 'cfg': appcfg, 'looper': looper});
-				var nsproxy = new Nsproxy(account,{'point': point, 'cfg': appcfg, 'looper': looper});
-				var nsloader = new Nsloader(account, {'point': point, 'cfg': appcfg, 'looper': looper, 'nsproxy':nsproxy});
-				var vplayer = new VideoPlayer(account, {'cfg': appcfg});
+				
+				var account = new Account({'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger, 'cookies':cookies});
+				var nsproxy = new Nsproxy(account,{'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger});
+				var nsloader = new Nsloader(account, {'point': point, 'cfg': appcfg, 'looper': looper, 'nsproxy':nsproxy, 'logger': logger});
+				var vplayer = new VideoPlayer(account, {'cfg': appcfg, 'logger': logger});
 				vplayer.init();
+				
 				var index_addr = cfg.get('index');
-				if(!index_addr) index_addr = '/dist/index.html'
-				var g_win = new Window("OopsTeam", "renderer.js", `file://${__dirname}${index_addr}`, account, {
+				if(!index_addr || index_addr.length>0) index_addr = '/dist/index.html';
+				var index_file_path = `${__dirname}${index_addr}`;
+				if(!fs.existsSync(index_file_path)){
+					index_addr = '/dist/index.html';
+					index_file_path = `${__dirname}${index_addr}`;
+				}
+				var load_url = `file://${index_file_path}`;
+				console.log('load url:', load_url);
+				var g_win = new Window("OopsTeam", "renderer.js", load_url, account, {
 					'cfg': appcfg,
 					'nsloader':nsloader,
 					'vplayer':vplayer,
 					'logger': logger,
+					'version':app_version,
 					win:win_option
 				});
 				nsloader.parent_win = g_win;
@@ -269,15 +315,32 @@ app.on('ready', ()=>{
 					looper.stop();
 				});
 				cfg.check_upgrade();
+				contact_action = function(msg){
+					if(!lock_contact_btn){
+						var playload = {'tag':'contact', 'cmd':'invite', 'msg':msg};
+						g_win.send(playload);
+						lock_contact_btn = true;
+					}
+				}
+				menu = Menu.buildFromTemplate(template)
+				Menu.setApplicationMenu(menu);
 			};
 			cfg.update('app_data_dir', app_data_dir, '应用根目录', ()=>{
 				cfg.update('data_dir', data_dir, '应用数据目录',()=>{
 					cfg.update('download_dir', download_dir, '应用资源下载目录',()=>{
-						cfg.update('patch_data_dir', patch_data_dir, '补丁下载目录',final_call);
+						cfg.update('patch_data_dir', patch_data_dir, '补丁下载目录',()=>{
+							// cookies.init(()=>{
+							// 	final_call();
+							// });
+							final_call();
+						});
 					});
 				});
 			});
-			
+			app.on('before-quit',(event)=>{
+				// event.preventDefault();
+			});
 		});
 	});
+	
 });

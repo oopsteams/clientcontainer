@@ -207,11 +207,11 @@ var helpers = {
 		var Surrogate = function() {
 			this.constructor = BaseElement;
 		};
-
+		
 		Surrogate.prototype = me.prototype;
-		BaseElement.prototype = new Surrogate();
+		var sur_inst = new Surrogate();
+		BaseElement.prototype = sur_inst;
 		BaseElement.extend = helpers.inherits;
-
 		if (extensions) {
 			helpers.extend(BaseElement.prototype, extensions);
 		}
@@ -517,7 +517,7 @@ var helpers = {
 			file: zippath,
 		  strip: 1,
 		  C: target_dir // alias for cwd:'some-dir', also ok
-		}, null, callback)
+		}).then(()=>{callback('ok')});
 		
 		
 		// var gunzip = zlib.createGunzip();

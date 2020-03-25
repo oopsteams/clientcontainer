@@ -1,4 +1,4 @@
-const { remote, ipcRenderer } = require('electron');
+const { remote, ipcRenderer, shell} = require('electron');
 console.log('remote:',remote)
 if(remote){
 	var triggered_tags = {};
@@ -22,6 +22,7 @@ if(remote){
 				window.global_context.point = args.point;
 				window.global_context.lg_rs=args.lg_rs;
 				window.global_context.user=rs;
+				window.global_context.version = args.version;
 				var params = [rs];
 				// console.log('trigger start:', params);
 				trigger("start", params);
@@ -84,7 +85,9 @@ if(remote){
 		'msgPointFront':'asyn-win-front',
 		'init':init,
 		'listeners':{},
+		'version':'0.0.0',
 		'send':send_message,
-		'addListener':addListener
+		'addListener':addListener,
+		'openbrowser':function(url){if(url)shell.openExternal(url);}
 	};
 }
