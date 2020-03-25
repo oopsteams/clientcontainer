@@ -269,6 +269,7 @@ app.on('ready', ()=>{
 		console.log("hn:",os.hostname());
 		var appcfg = new AppCfg(patch_data_dir,{'version': app_version});
 		appcfg.init((cfg)=>{
+			console.log('init ok!');
 			interceptHttp();
 			var cookies = new Cookies({'cfg': appcfg, 'logger': logger});
 			var final_call = ()=>{

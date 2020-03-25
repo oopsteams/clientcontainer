@@ -284,6 +284,7 @@ var api = {
 				client_http_engine = https;
 				options['port'] = 443;
 			}
+			console.log('check_service options:', options);
 			const req = client_http_engine.request(options, (res)=>{
 				res.setEncoding('utf8');
 				let rawData = '';
