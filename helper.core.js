@@ -6,7 +6,6 @@ const tar = require('tar');
 const POINT = 'http://111.229.193.232/';
 const ERR_CODES_MAP = {1:'需要先登录!', 2:'参数错误!', 3:'未知错误!'};
 var helpers = {
-	// point:"http://192.168.0.101:8080/",
 	point:POINT,
 	// point:"https://www.oopsteam.site/",
 	points:[POINT, 'https://www.oopsteam.site/', 'http://www.oopsteam.site/', 'http://111.229.193.232:8080/'],
