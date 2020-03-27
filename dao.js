@@ -364,7 +364,7 @@ var Dao = Base.extend(
 			if(key && value){
 				var _f = this.find_field_by_name(key);
 				var query_rows = "select * from " + this.name + " where " + key + "=" + this.format_val_by_type(_f, value);
-				console.log("get query_rows:", query_rows);
+				// console.log("get query_rows:", query_rows);
 				ithis.db.get(query_rows, (err, row)=>{
 					if(cb){
 						if(row){

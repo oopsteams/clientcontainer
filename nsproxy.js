@@ -87,10 +87,13 @@ var nsproxy = Base.extend({
 				_options['ua'] = ua;
 			}
 			service.server_get_header(dlink, (err, code, header)=>{
-				console.log("header:", header);
+				// console.log("header:", header);
 				if(!err){
-					if(_cb)_cb(code, header);
+					
+				} else {
+					console.log('err:', err);
 				}
+				if(_cb)_cb(code, header);
 			}, _options);
 		}
 		var try_cnt = 0;
@@ -188,7 +191,54 @@ var nsproxy = Base.extend({
 				final_call({"error_code":1})
 			}
 		});
-		
+	},
+	transfer_ready:function(data, callback){
+		var self = this;
+		self.account.check_state((isok, rs)=>{
+			console.log('checkcopyfile data:', data);
+			service.server_get(rs.tk, 'product/checktransferfile', data, (err, raw)=>{
+				if(!err){
+					var body = JSON.parse(raw);
+					var st = body.state;
+					var fail = true;
+					if(st < 0){
+						//需要先绑定baidu账号
+						console.log("logic failed:",body.err);
+					}else {
+						//success
+						fail = false;
+					}
+					var item = body['item'];
+					var _rs = {'state': body['state'], 'pos': body['pos'], 'item': item};
+					for(var k in body){
+						_rs[k] = body[k];
+					}
+					callback(fail, _rs);
+				} else {
+					callback(true, {"err": "网络服务异常!", "state": -1});
+				}
+			});
+		});
+	},
+	check_ready_state:function(callback){
+		var self = this;
+		self.account.check_state((isok, rs)=>{
+			service.server_get(rs.tk, 'async/checkstate', {}, (err, raw)=>{
+				if(!err){
+					var body = JSON.parse(raw);
+					console.log("check_ready_state body:", body);
+					var _rs = {};
+					for(var k in body){
+						_rs[k] = body[k];
+					}
+					if(callback){
+						callback(false, _rs, body);
+					}
+				} else {
+					callback(true, {"err": "网络服务异常!", "state": -1}, null);
+				}
+			});
+		});
 	}
 });
 module.exports = nsproxy;

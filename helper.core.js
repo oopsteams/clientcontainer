@@ -2,13 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const tar = require('tar');
 // const POINT = 'http://192.168.0.102:8080/';
-const POINT = 'http://127.0.0.1:8080/';
+// const POINT = 'http://127.0.0.1:8080/';
+const POINT = 'http://111.229.193.232/';
 const ERR_CODES_MAP = {1:'需要先登录!', 2:'参数错误!', 3:'未知错误!'};
 var helpers = {
 	// point:"http://192.168.0.101:8080/",
 	point:POINT,
 	// point:"https://www.oopsteam.site/",
-	points:[POINT, 'https://www.oopsteam.site/', 'http://www.oopsteam.site/', 'http://111.229.193.232:8080/', 'http://111.229.193.232/'],
+	points:[POINT, 'https://www.oopsteam.site/', 'http://www.oopsteam.site/', 'http://111.229.193.232:8080/'],
 	data_dir_name:".datas",
 	app_data_dir_name:".oopsteam",
 	download_dir_name:"download",

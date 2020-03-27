@@ -38,6 +38,7 @@ var download_task_db = new Dao({'type':'list', 'name':'tasks',
 	{name:"filename", type:'VARCHAR', len:512},
 	{name:"total_length", type:'INT'},
 	{name:"type", type:'VARCHAR', len:10},
+	{name:"fuzzy_id", type:'VARCHAR', len:64},
 	{name:"tm", type:'INT'}
 	]
 });
@@ -155,9 +156,8 @@ var build_download_loader = function(datas, callback){
 	}
 	
 }
-const section_max_size = 6 * 1024 * 1024;
+const section_max_size = 5 * 1024 * 1024;
 const section_min_size = 2* 1024 * 1024;
-const common_ua = "pan.baidu.com";
 const max_idle_cnt = 30;
 const max_counter = 8;
 const min_counter = 3;
@@ -192,7 +192,14 @@ var nsSubTask = Base.extend({
 		console.log("sub task will save:", this.params['id']);
 		download_sub_task_db.get('id',this.params['id'],(_task)=>{
 			if(_task){
-				download_sub_task_db.update_by_id(self.params['id'], self.params, cb);
+				var start_at = self.params['start'];
+				var end_at = self.params['end'];
+				if(_task['start'] == start_at && _task['end'] == end_at){
+					if(cb){cb();}
+				} else {
+					this.params['id'] = this.params['id'] + '_0';
+					download_sub_task_db.put(self.params, cb);
+				}
 			} else {
 				download_sub_task_db.put(self.params, cb);
 			}
@@ -335,6 +342,10 @@ var nsSubTask = Base.extend({
 			}
 			this.params['get_size'] = states.size;
 			return states.size;
+		} else {
+			if(this.size() == 0 && this.get_state() != 2){
+				this.update_state(2);
+			}
 		}
 		this.last_get_size = 0;
 		return 0;
@@ -388,7 +399,7 @@ var nsSubTask = Base.extend({
 					callback(null);
 				}
 			}
-		}, 800);
+		}, 1000);
 		
 	},
 	ready_emit_loader_thread:function(cb){
@@ -405,13 +416,14 @@ var nsSubTask = Base.extend({
 			return;
 		}
 		this.nstask.get_loader_by_id(params['loader_id'],(l)=>{
-			console.log('ready_emit_loader_thread loader:', l.id, ", sub task:", fn);
+			// console.log('ready_emit_loader_thread loader:', l.id, ", sub task:", fn);
 			// console.log('ready_emit_loader_thread sub task params:', params);
 			download_loader_db.update_by_id(l.id, {'pin': 1}, (id, params)=>{
-				self.emit_loader_thread(l);
-				if(cb){
-					cb();
-				}
+				self.emit_loader_thread(l, ()=>{
+					if(cb){
+						cb();
+					}
+				});
 			});
 		});
 		
@@ -430,6 +442,7 @@ var nsSubTask = Base.extend({
 	},
 	get_ua:function(loader){
 		var ithis = this;
+		/*
 		var url = loader.dlink;
 		ithis.ua = ithis.nsloader.cfg.get('common_user_agent');
 		if(exclude_ua_map.hasOwnProperty(url)){
@@ -440,6 +453,7 @@ var nsSubTask = Base.extend({
 		} else {
 			return ithis.ua;
 		}
+		*/
 		var ua = this.nsloader.random_ua();
 		ithis.ua = ua;
 		return ua;
@@ -447,20 +461,28 @@ var nsSubTask = Base.extend({
 	emit_loader_thread:function(loader, next_cb){
 		var ithis = this;
 		var params = this.params;
-		if([2,7].indexOf(ithis.get_state()) >=0 ) {
+		if([2,7].indexOf(ithis.get_state()) >=0) {
 			console.log('下载任务不符合下载状态:', params);
+			if(next_cb)next_cb();
+			return;
+		}
+		if(this.size() == 0){
+			console.log('下载任务Size不符合下载状态:', params);
+			ithis.check_file_size();
+			if(next_cb)next_cb();
 			return;
 		}
 		var is_patch = params.hasOwnProperty('patch')?params.patch==1:false;
 				// var loader = this.loader_context.cfl.get_loader_by_id(params['loader_id']);
-		var url = loader.dlink;
+		var url = loader.rdlink;
+		if(!url)url = loader.dlink;
 		var fn = params['id'];
 		var start = params['start'];
 		var end = params['end'];
 		var headers = {"User-Agent": ithis.get_ua(loader)};
 		headers["Range"]="bytes="+start+"-"+(end-1);
 		var file_path = path.join(this.nstask.download_file_path, fn);
-		// console.log("file_path:", file_path, params);
+		console.log("fetch headers:", headers);
 		var stream = fs.createWriteStream(file_path);
 		stream.on('drain', function(e){
 		  params['drain'] = helpers.now();
@@ -536,6 +558,7 @@ var nsSubTask = Base.extend({
 		};
 		this.try_close_pipe();
 		try{
+			console.log('will request url:', url);
 			var rq = request(options);
 			this.pipe = rq.pipe(stream);
 			this.pipe.on("close", function(){
@@ -706,7 +729,7 @@ var nstask = Base.extend({
 		this.exhaust = '';
 		this.speed = '0B';
 		this.need_clear_task_list = [];
-		this.download_file_path = path.join(this.nsloader.download_dir, this.task.id)
+		this.download_file_path = path.join(this.nsloader.download_dir, ''+this.task.id)
 		// console.log('this.task:', this.task);
 		if(options && options.onReady){
 			options.onReady(this);
@@ -721,7 +744,6 @@ var nstask = Base.extend({
 	active_tasks:function(callback){
 		var ithis = this;
 		var item = ithis.task;
-		console.log('active_tasks item:', item);
 		console.log('active_tasks task:', ithis.task);
 		if(!fs.existsSync(ithis.download_file_path)){
 			fs.mkdirSync(ithis.download_file_path);
@@ -778,8 +800,8 @@ var nstask = Base.extend({
 		var query_file_head_callback = function(url, params){
 			if(url == null && params['info']){
 				// this.nsloader.send()
-				console.log('info:',params['info']);
-				// ithis.sender.send('asynchronous-reply', {'id': item.fs_id, 'info': params['info'], 'tag': 'download'});
+				// console.log('info:',params['info']);
+				ithis.nsloader.send({'tag':'alert', 'msg': params['info']});
 				return;
 			}
 			var l = params['length'];
@@ -842,7 +864,7 @@ var nstask = Base.extend({
 									//show dialog
 									console.log('send show_dialog!!!!');
 									// ithis.sender.send('asynchronous-reply', {'id': item.fs_id, 'info': params['info'], 'tag': 'show_dialog'});
-									callback();
+									if(callback)callback();
 								});
 								
 							});
@@ -873,6 +895,9 @@ var nstask = Base.extend({
 					});
 				} else {
 					console.log('stop here!!!!!');
+					var msg = params['info'];
+					if(!msg)msg='获取Dlink失败,请暂停,稍后请重试！';
+					ithis.nsloader.send({'tag':'alert', 'msg': msg});
 				}
 			}, 'pan.baidu.com');
 		} else {
@@ -978,8 +1003,10 @@ var nstask = Base.extend({
 		self.init_dlink(()=>{
 			self.update_state(1, (id, params)=>{
 				console.log('resume id:', id, ', params:', params, ',state:', self.get_state());
-				self.active_tasks(()=>{
-					callback(false, result);
+				self.repair_sub_tasks(()=>{
+					self.active_tasks(()=>{
+						callback(false);
+					});
 				});
 			});
 		});
@@ -1117,6 +1144,7 @@ var nstask = Base.extend({
 		var loader_pos = 0;
 		var _loader_list = [];
 		// var item = ithis.item;
+		var state_0_patch_tasks = [];
 		var patch_tasks = [];
 		this.checking_next_task = true;
 		console.log('check_next_task in!!!!');
@@ -1130,6 +1158,7 @@ var nstask = Base.extend({
 				});
 				
 			} else {
+				
 				if(cb)cb();
 				// self.checking_next_task = false;
 			}
@@ -1157,12 +1186,23 @@ var nstask = Base.extend({
 					do_patch_tasks();
 				}
 			} else {
+				if(patch_tasks.length == 0){
+					var _l = state_0_patch_tasks.length;
+					if(_l>0){
+						if(_l>0 && _l < current_min_thread_num){
+							_l = current_min_thread_num;
+						}
+						for(var k=0;k<_l;k++){
+							patch_tasks.push(state_0_patch_tasks[k]);
+						}
+					}
+				}
 				do_patch_tasks();
 			}
 		};
 		
 		var async_re_call = (pos, loader)=>{
-			console.log('async_re_call pos:', pos, ',tasks len:', ithis.tasks.length);
+			// console.log('async_re_call pos:', pos, ',tasks len:', ithis.tasks.length);
 			if(pos>=ithis.tasks.length){
 				final_call(false);
 				return;
@@ -1174,7 +1214,7 @@ var nstask = Base.extend({
 				});
 				return;
 			}
-			console.log('t.get_state:', typeof(t.get_state));
+			// console.log('t.get_state:', typeof(t.get_state));
 			if(t.get_state() == 7){ //处理一下 state:3中途失败的段
 				console.log('find 7 state pos:', pos);
 				t.params.loader_id = loader.id;
@@ -1272,6 +1312,7 @@ var nstask = Base.extend({
 						}
 						var _p = new_task_params_list[pos];
 						ithis.recover_sub_task(_p, (_rs, nst)=>{
+							new_task_list.push(nst);
 							build_new_task(pos + 1, cb);
 						});
 						// var _task = new Tasker(ithis, _p);
@@ -1320,7 +1361,13 @@ var nstask = Base.extend({
 				};
 				renew_sub_task();
 			}else {
-				async_re_call(pos + 1, loader);
+				if(t.get_state() == 0){
+					//state_0_patch_tasks.push(t);
+					patch_tasks.push(t);
+					final_call(true);
+				} else {
+					async_re_call(pos + 1, loader);
+				}
 			}
 		}
 		
@@ -1407,14 +1454,23 @@ var nstask = Base.extend({
 			// 	});
 			// }
 			if(!all_over){
-				ithis.deal_check_tasks_events((cnt)=>{if(cnt>0)console.log('deal cnt:', cnt)});
+				if(counter > 3){
+					counter = 0;
+					ithis.deal_check_tasks_events((cnt)=>{if(cnt>0)console.log('deal cnt:', cnt)});
+				} else {
+					counter +=1;
+				}
 				return false;
 			} else {
 				ithis.clean_tasks();
-				ithis.merge_final_file(()=>{
-					// ithis.sender.send('asynchronous-reply', {'id': ithis.task.id, 'over':all_over, 'task': ithis.task, 'tag':'sub_tasks', 'tasks_params':sub_task_params, 'total_length': total_length, 'total_file_size':total_file_size, "speed": speed, "need": exhaust});
-				});
-				return true;
+				if(ithis.check_all_sub_task_state_is_complete()){
+					ithis.merge_final_file(()=>{
+						// ithis.sender.send('asynchronous-reply', {'id': ithis.task.id, 'over':all_over, 'task': ithis.task, 'tag':'sub_tasks', 'tasks_params':sub_task_params, 'total_length': total_length, 'total_file_size':total_file_size, "speed": speed, "need": exhaust});
+					});
+					return true;
+				} else {
+					return false;
+				}
 			}
 			// if(all_over){
 			//   ithis.merge_final_file(()=>{
@@ -1431,6 +1487,18 @@ var nstask = Base.extend({
 		};
 		ithis.nsloader.looper.addListener(ithis.task.id, looper_listener, {context:this, total:total_length});
 	},
+	check_all_sub_task_state_is_complete:function(){
+		var all_is_ok = true;
+		var len = this.tasks.length;
+		for(var i=0;i<len;i++){
+			var t = this.tasks[i];
+			if(t.get_state() != 2){
+				all_is_ok = false;
+				break;
+			}
+		}
+		return all_is_ok;
+	},
 	valid_tasks_order:function(){
 		var ithis = this;
 		this.tasks.sort(function(task_a, task_b){
@@ -1441,6 +1509,8 @@ var nstask = Base.extend({
 		this.tasks.forEach(function(t, index){
 			var fn = t.params.id;
 			var file_path = path.join(ithis.download_file_path, fn);
+			var t_size = t.check_file_size();
+			// console.log('t_size:', t_size, ',fn:', t.params.id);
 			if(t.check_file_size()>0){
 				all_sub_files.push(file_path);
 				all_sub_tasks.push(t);
@@ -1449,6 +1519,7 @@ var nstask = Base.extend({
 		var pass = false;
 		var pos = 0;
 		var last_id = '';
+		// console.log('all_sub_files:', all_sub_files);
 		for(var i=0;i<all_sub_tasks.length;i++){
 			var t=all_sub_tasks[i];
 			var start_at = t.params["start"];
@@ -1512,11 +1583,12 @@ var nstask = Base.extend({
 		var re_call = function(pos){
 			// console.log('_re_call_emit_loader_thread pos:',pos);
 			if(pos>=subtasks.length){
+				console.log('_re_call_emit_loader_thread will be over [pos == len]:', pos);
 				fc(used_cnt);
 				return;
 			}
 			var t = subtasks[pos];
-			console.log('sub task:', t.params.id, ',st:', t.get_state());
+			// console.log('sub task:', t.params.id, ',st:', t.get_state());
 			if(t.get_state() == 0){
 				used_cnt = used_cnt + 1;
 				t.ready_emit_loader_thread(()=>{
@@ -1552,6 +1624,8 @@ var nstask = Base.extend({
 					this.update_state(1,()=>{
 						self.emit_tasks(cb);
 					});
+				} else {
+					console.log('emit_tag return false!!!');
 				}
 			} else {
 				this.update_state(1,()=>{
@@ -2048,6 +2122,7 @@ var nstask = Base.extend({
 		var ithis = this;
 		this.complete(()=>{
 			console.log('del task:', ithis.task);
+			console.log('del path:', ithis.download_file_path);
 			try{
 				if(fs.existsSync(ithis.download_file_path)){
 					fs.rmdirSync(ithis.download_file_path);
@@ -2057,10 +2132,77 @@ var nstask = Base.extend({
 					if(cb){cb();}
 				});
 			}catch(err){
-				ithis.send({'tag':'alert', 'msg': '文件下载后未迁移,目录删除失败!'});
+				console.log('err:', err);
+				ithis.nsloader.send({'tag':'alert', 'msg': '文件下载后未迁移,目录删除失败!'});
 				if(cb){cb();}
 			}
 			
+		});
+	},
+	repair_sub_tasks:function(callback){
+		var self = this;
+		var repair_items = (sub_tasks)=>{
+			var last_task = null;
+			var need_patch_items = [];
+			function deal_sub_task(pos){
+				if(pos>=sub_tasks.length){
+					if(callback)callback();
+					return;
+				}
+				var sub_task_param = sub_tasks[pos];
+				if(sub_task_param['state'] == 7){
+					deal_sub_task(pos+1);
+					return;
+				}
+				if(last_task == null){
+					last_task = sub_task_param;
+					deal_sub_task(pos+1);
+				} else {
+					var check_start_at = last_task['end'];
+					if(check_start_at == sub_task_param['start']){
+						last_task = sub_task_param;
+						deal_sub_task(pos+1);
+					} else {
+						var n_start = check_start_at;
+						var n_end = sub_task_param['start'];
+						var prefix_id = last_task.id;
+						var path_task_params = {'id':prefix_id+'_1', 'source_id':last_task.source_id, 
+						'start':n_start, 'end':n_end, 'over':0, 'idx':0, 'retry':0, 'loader_id': last_task.loader_id, 'state': 0};
+						console.log('path_task_params:',path_task_params);
+						download_sub_task_db.get('id',path_task_params['id'],(_task)=>{
+							if(_task){
+								path_task_params['id'] = path_task_params['id'] + '_1';
+								download_sub_task_db.put(path_task_params, ()=>{
+									last_task = sub_task_param;
+									deal_sub_task(pos+1);
+								});
+							} else {
+								download_sub_task_db.put(path_task_params, ()=>{
+									last_task = sub_task_param;
+									deal_sub_task(pos+1);
+								});
+							}
+						});
+					}
+				}
+			}
+			deal_sub_task(0);
+		}
+		self.query_tasker_list_from_local(self.task.id, (sub_tasks)=>{
+			if(sub_tasks && sub_tasks.length>0){
+				sub_tasks.sort(function(params_a, params_b){
+					return params_a["start"] - params_b["start"];
+				});
+				var _sub_tasks = [];
+				sub_tasks.forEach((st, idx)=>{
+					if(st['end'] - st['start']>0){
+						_sub_tasks.push(st);
+					}
+				});
+				repair_items(_sub_tasks);
+			} else {
+				if(callback)callback();
+			}
 		});
 	},
 	move_file:function(cb){
@@ -2208,6 +2350,7 @@ var nsloader = Base.extend({
 			this.nsproxy = options.nsproxy;
 		}
 		this.account = account;
+		this.user_id = '';
 		this.parent_win = null;
 		this.token = null;
 		this.tasks = [];
@@ -2219,13 +2362,14 @@ var nsloader = Base.extend({
 		}
 	},
 	random_ua:function(){
-		var os_ver = os.release();
-		var devices = this.cfg.get('devices');//['pc;pc-mac;10.13.6;macbaiduyunguanjia','pc;macos1;10.13.6;macbaiduyunguanjia','pc;cccone;10.13.6;macbaiduyunguanjia','pc;levis;10.13.6;macbaiduyunguanjia'];
-		var ver = '2.2';
-		var suf = ~~(Math.random() * 4);
-		ver = ver + '.' + suf;
-		var devices_idx = ~~(Math.random() * devices.length);
-		var ua = "netdisk;"+ver+";pc;"+devices[devices_idx]+";"+os_ver+";macbaiduyunguanjia";
+		// var os_ver = os.release();
+		// var devices = this.cfg.get('devices');//['pc;pc-mac;10.13.6;macbaiduyunguanjia','pc;macos1;10.13.6;macbaiduyunguanjia','pc;cccone;10.13.6;macbaiduyunguanjia','pc;levis;10.13.6;macbaiduyunguanjia'];
+		// var ver = '2.2';
+		// var suf = ~~(Math.random() * 4);
+		// ver = ver + '.' + suf;
+		// var devices_idx = ~~(Math.random() * devices.length);
+		// var ua = "netdisk;"+ver+";pc;"+devices[devices_idx]+";"+os_ver+";macbaiduyunguanjia";
+		var ua = this.cfg.get_ua()
 		return ua;
 	},
 	query_file_head:function(url, callback, ua){
@@ -2270,37 +2414,52 @@ var nsloader = Base.extend({
 		var self = this;
 		var idx_list = [];
 		var _t = this.task_map[task_id];
-		console.log('ns loader del _t:', _t, ",task_id:", task_id);
+		console.log("ns loader del main task_id:", task_id);
 		if(_t){
 			_t.del(()=>{
 				var dirty_tasks = [_t];
+				console.log('_t:', _t);
 				for(var i=0;i<self.tasks.length;i++){
 					var t=self.tasks[i];
-					if(_t.id == t.id){
+					console.log('t task:', t.task);
+					if(_t.task.id == t.task.id){
 						idx_list.push(i)
 					}
 				}
 				if(idx_list && idx_list.length>0){
+					var re_patch_tasks = [];
 					idx_list.sort().reverse();
 					idx_list.forEach((idx, _)=>{
-						var t = self.tasks.splice(idx,1);
-						if(dirty_tasks.indexOf(t)<0){
-							self.tasks.push(t);
+						var dirty_t = null;
+						var dirty_ts = self.tasks.splice(idx,1);
+						if(dirty_ts.length>0){
+							dirty_t = dirty_ts[0]
+						}
+						if(dirty_t && dirty_tasks.indexOf(dirty_t)<0){
+							console.log('will put back task id:', dirty_t.task.id);
+							re_patch_tasks.push(t);
 						} else {
 							console.log('will del task:', t.id, ',task_id:', task_id);
 							delete self.task_map[t.id];
 						}
 					});
+					if(re_patch_tasks.length>0){
+						re_patch_tasks.forEach((r_t, _)=>{
+							self.tasks.push(r_t);
+						});
+					}
 				}
 				if(cb)cb();
 			});
 		}
 	},
 	new_download_nstask:function(item, callback){
+		var self = this;
 		var task = {'id': item['fs_id'],
 		'item_id': item['id'], 
 		// 'md5_val': item['md5_val'], 
 		'state': 0, 
+		'fuzzy_id': self.user_id,
 		'filename': item['filename'], 
 		// 'type':item['type'], 
 		'tm': helpers.now()};
@@ -2309,7 +2468,7 @@ var nsloader = Base.extend({
 			console.log("recover_nstask return isnew:", isnew);
 			console.log("recover_nstask return nst:", nst.task);
 			if(isnew){
-				nst.emit_tasks = function(){return true;};
+				nst.emit_tag = function(){return true;};
 				nst.save_task(()=>{
 					if(callback){
 						callback(isnew, nst);
@@ -2325,6 +2484,7 @@ var nsloader = Base.extend({
 				nst.init_dlink(()=>{
 					nst.update_state(1, (id, params)=>{
 						console.log('new_download_nstask id:', id, ', params:', params);
+						nst.emit_tag = function(){return true};
 						nst.active_tasks();
 					});
 				});
@@ -2381,17 +2541,17 @@ var nsloader = Base.extend({
 							fail = false;
 						}
 						var item = body['item'];
-						var rs = {'state': body['state'], 'pos': body['pos'], 'item': item};
+						var _rs = {'state': body['state'], 'pos': body['pos'], 'item': item};
 						for(var k in body){
-							rs[k] = body[k];
+							_rs[k] = body[k];
 						}
 						if(body['state'] == 0 && body['pos'] == 4 && item){
 							console.log('new_download_ready success item:', item);
 							self.new_download_nstask(item, (r, nst)=>{
-								callback(fail, rs);
+								callback(fail, _rs);
 							});
 						} else {
-							callback(fail, rs);
+							callback(fail, _rs);
 						}
 						// self.send({'tag':'tree', 'id':args.id, 'data': body, 'fail': fail, 'cmd':"download"});
 						console.log("raw:", raw);
@@ -2409,28 +2569,43 @@ var nsloader = Base.extend({
 			self._parse_task_state(nst, callback);
 		} else {
 			console.log('nsloader check_ready_state in:', task_id);
-			self.account.check_state((isok, rs)=>{
-				service.server_get(rs.tk, 'async/checkstate', {}, (err, raw)=>{
-					if(!err){
-						var body = JSON.parse(raw);
-						console.log("check_ready_state body:", body);
-						var rs = {};
-						for(var k in body){
-							rs[k] = body[k];
-						}
-						var item = body['item'];
-						if(body['state'] == 0 && body['pos'] == 4 && item){
-							console.log('check_ready_state success item:', item);
-							self.new_download_nstask(item, (r, nst)=>{
-								callback(false, rs);
-							});
-						} else {
-							callback(false, rs);
-						}
-						
+			self.nsproxy.check_ready_state((failed, _rs, body)=>{
+				if(body){
+					var item = body['item'];
+					if(body['state'] == 0 && body['pos'] == 4 && item){
+						console.log('check_ready_state success item:', item);
+						self.new_download_nstask(item, (r, nst)=>{
+							callback(false, _rs);
+						});
+					} else {
+						callback(false, _rs);
 					}
-				});
+				} else {
+					callback(true, _rs);
+				}
 			});
+			// self.account.check_state((isok, rs)=>{
+			// 	service.server_get(rs.tk, 'async/checkstate', {}, (err, raw)=>{
+			// 		if(!err){
+			// 			var body = JSON.parse(raw);
+			// 			console.log("check_ready_state body:", body);
+			// 			var rs = {};
+			// 			for(var k in body){
+			// 				rs[k] = body[k];
+			// 			}
+			// 			var item = body['item'];
+			// 			if(body['state'] == 0 && body['pos'] == 4 && item){
+			// 				console.log('check_ready_state success item:', item);
+			// 				self.new_download_nstask(item, (r, nst)=>{
+			// 					callback(false, rs);
+			// 				});
+			// 			} else {
+			// 				callback(false, rs);
+			// 			}
+						
+			// 		}
+			// 	});
+			// });
 		}
 	},
 	recover_nstask:function(task, callback){
@@ -2451,8 +2626,9 @@ var nsloader = Base.extend({
 		self.account.check_state((isok, rs)=>{
 			if(isok){
 				var tk = rs.tk;
+				self.user_id = rs.id;
 				self.token = tk;
-				var wheresql = "where state <= 3 order by tm desc ";
+				var wheresql = "where state <= 3 and fuzzy_id='"+self.user_id+"' order by tm desc ";
 				download_task_db.query_by_raw_sql(wheresql, (task_list)=>{
 					var init_task_list = [], 
 					dlink_ok_list = [],
@@ -2500,7 +2676,9 @@ var nsloader = Base.extend({
 		var self = this;
 		var datas = [];
 		self.tasks.forEach((t, idx)=>{
-			datas.push(t.compute_progress());
+			if(t && t.compute_progress && typeof(t.compute_progress) == 'function'){
+				datas.push(t.compute_progress());
+			}
 		});
 		console.log(
 			"app_data_dir:", self.cfg.get("app_data_dir"),
@@ -2517,7 +2695,9 @@ var nsloader = Base.extend({
 			// if(t.get_state() == 1){
 			// 	task_list.push(t.compute_progress());
 			// }
-			task_list.push(t.compute_progress());
+			if(t && t.compute_progress && typeof(t.compute_progress) == 'function'){
+				task_list.push(t.compute_progress());
+			}
 		});
 		return task_list
 	}

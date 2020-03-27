@@ -11,6 +11,12 @@ if(remote){
 	function update_st(v){
 		window.global_context.st = v;
 	}
+	function init_ui(){
+		// var linkStyle = document.getElementsByTagName('link')[0];
+		// var sheet = linkStyle.sheet;
+		// var rules = sheet.cssRules;
+		// sheet.insertRule('.el-button--mini{padding: 0.125rem, 0.5625rem;}',0);
+	}
 	function onMessage(args){
 		var self = this;
 		var tag = args.tag;
@@ -23,6 +29,7 @@ if(remote){
 				window.global_context.lg_rs=args.lg_rs;
 				window.global_context.user=rs;
 				window.global_context.version = args.version;
+				window.global_context.os = args.os;
 				var params = [rs];
 				// console.log('trigger start:', params);
 				trigger("start", params);
@@ -43,6 +50,7 @@ if(remote){
 	function init(bind_point, bind_front_point){
 		if(check_st(0)){
 			update_st(1);
+			init_ui();
 			window.global_context.msgPoint = bind_point;
 			window.global_context.msgPointFront = bind_front_point;
 			ipcRenderer.on(window.global_context.msgPointFront, function(event, args){

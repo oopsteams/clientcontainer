@@ -91,18 +91,35 @@ if(remote){
 	function update_st(v){
 		window.global_context.st = v;
 	}
-	function loop_check_Verifier(){
-		var elem = document.getElementById('Verifier');
-		if(elem && elem.value.length>0){
+	function loop_check_elem(){
+		var elem = document.querySelector('#qdbbedr');
+		if(elem){
 			//show alert
+			console.log('find elem:', elem);
+			if(window.global_context.share_info && window.global_context.share_info.shared){
+				elem.setAttribute('type', 'password');
+				elem.value = window.global_context.share_info.shared.pass;
+				var a_btn = document.querySelector('a.g-button[title="提取文件"]');
+				// console.log('a_btn:', a_btn);
+				if(a_btn){
+					a_btn.click();
+				}
+				
+			} else {
+				console.log('can not find share_info:',window.global_context.share_info);
+			}
 			if(dialog_ui){
 				dialog_ui.show("正在进行三方验证,请耐心等候!!!!!", {'onclose':(ctx)=>{},'onready':(ctx)=>{}});
 			} else {
 				console.log('dialog_ui is null!');
 			}
-			send_message({'tag':'code', 'code':elem.value});
 		} else {
-			setTimeout(loop_check_Verifier, 1000);
+			var a_btn = document.querySelector('a.g-button[title="保存到网盘"]');
+			if(a_btn){
+				console.log('已经打开分享目录!');
+				return;
+			}
+			setTimeout(loop_check_elem, 500);
 		}
 	}
 	function build_header(){
@@ -119,29 +136,23 @@ if(remote){
 		document.body.appendChild(header);
 	}
 	function init_ui(){
-		var all_check_list = document.querySelectorAll('input[type=checkbox]');
-		all_check_list.forEach((c,idx)=>{
-			c.setAttribute('checked', true);
-			c.setAttribute('disabled', true);
-		});
 		build_header();
-		console.log('url address:',document.location.href);
+		// console.log('url address:',document.location.href);
 		dialog_ui = build_alert_ui();
+		send_message({'tag':'ui_ready', 'cmd':'uiok'});
+		loop_check_elem();
 		
-		loop_check_Verifier();
-		// dialog_ui.show("正在进行三方验证,请耐心等候!!!!!", {'onclose':(ctx)=>{},'onready':(ctx)=>{}});
 	}
 	function onMessage(args){
 		var self = this;
 		var tag = args.tag;
 		if("start" == tag){
 			if(check_st(1)){
-				
-				init_ui();
 				args.tag = 'started';
 				var rs = args.rs;
-				window.global_context.point = args.point;
+				window.global_context.share_info = args.share_info;
 				var params = [rs];
+				init_ui();
 				trigger("start", params);
 				trigger("login", params);
 				send_message(args);
@@ -151,7 +162,7 @@ if(remote){
 			var logined = rs.logined, tk = rs.tk;
 			window.global_context.tk=tk;
 			window.global_context.user=rs;
-			console.log('tag login:', rs)
+			// console.log('tag login:', rs)
 			trigger("login", [rs]);
 		} else if("upload" == tag){
 			var datas = args.datas;
@@ -223,8 +234,8 @@ if(remote){
 		function set_css(){
 			var linkStyle = document.getElementsByTagName('link')[0];
 			var sheet = linkStyle.sheet;
-			var rules = sheet.cssRules;
 			if(sheet){
+				var rules = sheet.cssRules;
 				sheet.insertRule('.closeAlt_default{height:22px;line-height:22px;width:22px;float:left;padding-top:1px;cursor:pointer;background-repeat:no-repeat;background-position:center center}',0);
 				sheet.insertRule('.strip_zhong_default{height:22px;line-height:22px;text-align:left;color:#FFFFFF;background-color:silver;background-repeat:repeat-x;-moz-user-select:none}',0);
 				sheet.insertRule('.borderframe_default{border-top:0px;background-color:white;}',0);			

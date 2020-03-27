@@ -83,6 +83,9 @@ var window_helper = Base.extend({
 			self.win.close();
 		}
 	},
+	update_url:function(url){
+		this.load_url = url;
+	},
 	open:function(){
 		var self = this;
 		if(!self.win){
@@ -97,8 +100,8 @@ var window_helper = Base.extend({
 			  closable:true,
 			  // transparent:true,
 			  // titleBarStyle: 'customButtonsOnHover',
-			  titleBarStyle:'hiddenInset',
-			  // titleBarStyle:'hidden',
+			  // titleBarStyle:'hiddenInset',
+			  titleBarStyle:'hidden',
 			  webPreferences: {
 			    nodeIntegration: true,
 			    // webSecurity: false,
@@ -131,13 +134,15 @@ var window_helper = Base.extend({
 			// console.log('args:', args);
 			self.onMessage(self.win, args);
 		};
-		this.win.webContents.openDevTools();
+		// openDevTools
+		// this.win.webContents.openDevTools();
+		
+		
 		ipcMain.on(self.msg_point, self.win_listener);
 		var loc_to_url = ()=>{
+			var ua = self.cfg.get_ua();
 			self.win.loadURL(self.load_url, {
-				"userAgent": "pc;pc-mac;10.13.6;macbaiduyunguanjia",
-				"httpReferrer": "http://www.oopsteam.site/",
-				"extraHeaders": "Referer: http://www.oopsteam.site\n"
+				"userAgent": ua
 			});
 		}
 		if(this.cookies){

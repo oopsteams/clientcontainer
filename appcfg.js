@@ -25,6 +25,23 @@ var appcfg = Base.extend({
 		this.infos = [];
 		this.cfg = {};
 	},
+	random_ua:function(){
+		var os_ver = this.get('sysversion');
+		var devices = this.cfg.get('devices');//['pc;pc-mac;10.13.6;macbaiduyunguanjia','pc;macos1;10.13.6;macbaiduyunguanjia','pc;cccone;10.13.6;macbaiduyunguanjia','pc;levis;10.13.6;macbaiduyunguanjia'];
+		var ver = '2.2';
+		var suf = ~~(Math.random() * 4);
+		ver = ver + '.' + suf;
+		var devices_idx = ~~(Math.random() * devices.length);
+		var ua = "netdisk;"+ver+";pc;"+devices[devices_idx]+";"+os_ver+";macbaiduyunguanjia";
+		return ua;
+	},
+	get_ua:function(){
+		var platform = this.get('platform');
+		var sysversion = this.get('sysversion');
+		var netdiskversion = this.get('netdiskversion');
+		var ua = "netdisk;"+netdiskversion+";pc;"+platform+";"+sysversion+";macbaiduyunguanjia";
+		return ua;
+	},
 	check_upgrade_info:function(callback){
 		var self = this;
 		var rs = [];
@@ -33,7 +50,7 @@ var appcfg = Base.extend({
 			var appver = self.get('appver');
 			var appupurl = self.get('appupurl');
 			var current_app_versions = self.options.version;
-			if(current_app_versions != appver){
+			if(current_app_versions < appver){
 				var prefix_msg = '';
 				if(rs.length>0){
 					prefix_msg = rs[0].msg + '|';
@@ -47,14 +64,14 @@ var appcfg = Base.extend({
 		}
 		// console.log('upgrade_task:', self.upgrade_task);
 		if(self.upgrade_task.st == 1){
-			var msg = "正在下载最新系统内核,请不要退出应用![0.1%]";
+			var msg = "正在下载最新系统UI,请不要退出应用![0.1%]";
 			var new_prod_dir_lib = self.upgrade_task.libpath;
 			var size = self.upgrade_task.size;
 			if(fs.existsSync(new_prod_dir_lib)){
 				fs.stat(new_prod_dir_lib,(err, stats)=>{
 					var get_size = stats.size;
 					var prog_val = helpers.build_percentage(get_size/1024, size);
-					msg = "正在下载最新系统内核,请不要退出应用!["+prog_val+"%]";
+					msg = "正在下载最新系统UI,请不要退出应用!["+prog_val+"%]";
 					rs.push({'msg':msg, 'task':self.upgrade_task});
 					final_call(rs);
 				});
@@ -68,7 +85,7 @@ var appcfg = Base.extend({
 			if(err){
 				msg = self.upgrade_task.errmsg;
 			} else {
-				msg = "最新系统内核下载完成!";
+				msg = "最新系统UI下载完成!";
 			}
 			rs.push({'msg':msg, 'task':self.upgrade_task});
 			final_call(rs);
@@ -83,7 +100,7 @@ var appcfg = Base.extend({
 		var old_ver_val = self.get('old_version');
 		var new_ver_val = self.get('version');
 		console.log('check_upgrade old_ver_val:', old_ver_val, ',new_ver_val:',new_ver_val);
-		if(old_ver_val != new_ver_val){
+		if(old_ver_val < new_ver_val){
 			console.log('need_to_load new lib!!!!');
 			var upurl = self.get('upurl');
 			if(upurl.substring(upurl.length-1) != '/') upurl+='/';
@@ -155,7 +172,7 @@ var appcfg = Base.extend({
 						console.log('can not find lib, ', fpath);
 					}
 				} else {
-					self.upgrade_task.errmsg = '内核下载失败!';
+					self.upgrade_task.errmsg = 'UI下载失败!';
 					self.upgrade_task.err = err;
 				}
 				self.upgrade_task.st = 2;
@@ -176,10 +193,10 @@ var appcfg = Base.extend({
 		var final_call = ()=>{
 			if(callback)callback();
 		}
-		console.log(CFG_SYNC_TM+' v:', v)
+		// console.log(CFG_SYNC_TM+' v:', v)
 		if(helpers.now() - v>CFG_SYNC_DELAY){
-			// self.update(CFG_SYNC_TM, helpers.now(), CFG_SYNC_TM);
-			console.log('will call service!');
+			self.update(CFG_SYNC_TM, helpers.now(), CFG_SYNC_TM);
+			// console.log('will call service!');
 			//call service
 			service.check_service(self.points, (point, app_cfg)=>{
 				if(point){
@@ -188,7 +205,7 @@ var appcfg = Base.extend({
 				console.log('helpers point:', helpers.point);
 				if(app_cfg){
 					var next_up = (c, cb)=>{
-						console.log('update key:', c.key, ',val:', c.val, ',n:', c.name);
+						// console.log('update key:', c.key, ',val:', c.val, ',n:', c.name);
 						self.update(c.key, c.val, c.name, ()=>{
 							cb(true);
 						}, c.type);
@@ -254,10 +271,11 @@ var appcfg = Base.extend({
 				if(cb)cb(self);
 				Promise.resolve().then(()=>{self._sync();});
 			} else {
+				if(cb)cb(self);
 				Promise.resolve().then(()=>{self._sync(
-					()=>{
-						if(cb)cb(self);
-					}
+					// ()=>{
+					// 	if(cb)cb(self);
+					// }
 				);});
 			}
 			// if(cb)cb(self);

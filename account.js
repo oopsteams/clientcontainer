@@ -32,7 +32,7 @@ function call_pansite_by_post(point, path, params, callback){
 		headers: headers
 	};
 	request(options, function(error, response, body){
-		console.log("body:", body)
+		// console.log("body:", body)
 		var json_obj = JSON.parse(body);
 		if(!json_obj){
 			callback({"state": -1, "msg":"account not exist!"})
@@ -96,7 +96,7 @@ var account = Base.extend({
 		} else {
 			accounts_db.get(null, null, (user)=>{
 				if(!user || !user['id']||helpers.now() - user['tm']>helpers.token_timeout){
-					console.log('callback:',callback);
+					
 					//createLoginWindow(point, parent_win, callback);
 					// var js_str = 'window.open("'+`file://${__dirname}/login.html`+'","modal");';
 					// console.log("js_str:",js_str);
@@ -158,7 +158,7 @@ var account = Base.extend({
 				login_at = json_obj['login_at']
 				username = json_obj['username'];
 				portrait = json_obj['portrait'];
-				console.log('json_obj:', json_obj);
+				// console.log('json_obj:', json_obj);
 				var final_call = ()=>{
 					if(token){
 						self.user = {id: token, tm:login_at, "username":username, "portrait":portrait, "fuzzy_id":fuzzy_id};

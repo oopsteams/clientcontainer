@@ -20,21 +20,21 @@ var api = {
 		var rq = request(options);
 		var pipe = rq.pipe(stream);
 		pipe.on("close", function(){
-		  console.log("文件["+upurl+"] on close ===>:", upurl);
+		  // console.log("文件["+upurl+"] on close ===>:", upurl);
 		  stream.end();
 		});
 		rq.on("error", function(err){
-		  console.log("rq error 文件["+upurl+"]下载失败!===>",err);
+		  // console.log("rq error 文件["+upurl+"]下载失败!===>",err);
 		  
 		}).on("timeout", function(){
-			console.log("rq error 文件["+upurl+"]下载超时失败!");
+			// console.log("rq error 文件["+upurl+"]下载超时失败!");
 			
 		}).on("aborted", function(){
-			console.log("rq error 文件["+upurl+"]下载被中断失败!");
+			// console.log("rq error 文件["+upurl+"]下载被中断失败!");
 			
 		}).on("response",(res)=>{
 			if(res){
-				console.log('download headers:', res.headers);
+				// console.log('download headers:', res.headers);
 				res.on('end', () => {
 					if (res.complete){
 						callback(null, target_file_path);
@@ -151,9 +151,8 @@ var api = {
 			hostname: url.hostname,
 			path: url.pathname + url.search
 		};
-		console.log('options.protocol:',options.protocol);
+		// console.log('options.protocol:',options.protocol);
 		if(options.protocol.indexOf('https:')>=0){
-			console.log('update client_http_engin: https');
 			client_http_engine = https;
 			options['port'] = 443;
 		}
@@ -167,16 +166,16 @@ var api = {
 		if(_options && _options.options){
 			helpers.extend(options, _options.options);
 		}
-		console.log("server_get_header options:", options);
+		// console.log("server_get_header options:", options);
 		const req = client_http_engine.request(options, (res)=>{
 			
-			console.log('状态码:', res.statusCode);
+			// console.log('状态码:', res.statusCode);
 			cb(null, res.statusCode, res.headers);
 			if(res.statusCode == 302){
-				console.log("location:", res.headers['location'])
+				// console.log("location:", res.headers['location'])
 				
 			} else {
-				console.log('请求头:', res.headers);
+				// console.log('请求头:', res.headers);
 			}
 		});
 		req.on('error', (e)=>{
@@ -219,7 +218,7 @@ var api = {
 			client_http_engine = https;
 			options['port'] = 443;
 		}
-		console.log("server_get options:", options);
+		// console.log("server_get options:", options);
 		const req = client_http_engine.request(options, (res)=>{
 			res.setEncoding('utf8');
 			let rawData = '';
@@ -253,7 +252,7 @@ var api = {
 			insecureHTTPParser: true
 		};
 		var final_call = (pos, _point, rawData)=>{
-			console.log('check service pos:', pos, ',point:', _point);
+			// console.log('check service pos:', pos, ',point:', _point);
 			var app_cfg = [];
 			if(rawData && rawData.length>0){
 				app_cfg = JSON.parse(rawData);
@@ -284,7 +283,7 @@ var api = {
 				client_http_engine = https;
 				options['port'] = 443;
 			}
-			console.log('check_service options:', options);
+			// console.log('check_service options:', options);
 			const req = client_http_engine.request(options, (res)=>{
 				res.setEncoding('utf8');
 				let rawData = '';
@@ -333,7 +332,7 @@ var api = {
 			client_http_engine = https;
 			options['port'] = 443;
 		}
-		console.log("bd_get options:", options);
+		// console.log("bd_get options:", options);
 		const req = client_http_engine.request(options, (res)=>{
 			res.setEncoding('utf8');
 			let rawData = '';

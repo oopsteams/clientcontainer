@@ -133,10 +133,9 @@ var win_option = {
 	onMessage:function(win, args){
 		var self = this;
 		var tag = args.tag;
-		var vp = self.options.ctx;
+		var inst = self.options.ctx;
 		if("inited" == tag){
 			args.tag = 'start';
-			args['sources'] = vp.sources;
 			self.account.check_state((isok, rs)=>{
 				args['lg_rs'] = isok
 				args['rs'] = rs

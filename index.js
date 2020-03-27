@@ -30,11 +30,11 @@ var data_dir = path.join(app_data_dir, helpers.data_dir_name);
 //var dao = null;// wait data_dir make success
 if(!fs.existsSync(data_dir)){
   fs.mkdirSync(data_dir);
-  console.log('['+data_dir+']dir make success!');
+  // console.log('['+data_dir+']dir make success!');
   // dao = require('./dao.js');// wait data_dir make success
 }else{
   // dao = require('./dao.js');// wait data_dir make success
-  console.log('['+data_dir+']dir exist!');
+  // console.log('['+data_dir+']dir exist!');
 }
 const Window = require('./window.js')
 
@@ -66,6 +66,25 @@ var contact_reply = function(args){
 	}
 	lock_contact_btn = false;
 	// console.log('unlock btn!!!');
+}
+var win_action = function(args){
+	var self = this;
+	var cmd = args.cmd;
+	if('close' == cmd){
+		app.quit();
+	} else if('full' == cmd){
+		if(self.win){
+			if(!self.win.isMaximized()){
+				self.win.maximize();
+			} else {
+				self.win.unmaximize();
+			}
+		}
+	} else if('mini' == cmd){
+		if(self.win){
+			self.win.minimize();
+		}
+	}
 }
 var cfg_action = function(args){
 	var self = this;
@@ -141,6 +160,26 @@ var file_action = function(args){
 		self.options.nsloader.check_ready_state(args.data, (fail, rs)=>{
 			self.send({'tag':'tree', 'id':id, 'data': rs, 'cmd':"download_state"});
 		});
+	} else if("transfer" == cmd){
+		var id = args.data.id;
+		self.options.nsproxy.transfer_ready(args.data, (fail, rs, body)=>{
+			self.send({'tag':'tree', 'id':id, 'data': rs, 'cmd':"transfer"});
+		});
+	} else if("transfercheckstate" == cmd){
+		var id = args.data.id;
+		self.options.nsproxy.check_ready_state((fail, rs, body)=>{
+			console.log('send transfer_state msg:', rs);
+			self.send({'tag':'tree', 'id':id, 'data': rs, 'cmd':"transfer_state"});
+		});
+	} else if("opensharewin" == cmd){
+		var data = args.data;
+		var shared = data.shared;
+		var nodedata = data.node;
+		console.log('shared:', shared, ',nodedata:', nodedata);
+		self.options.sharewin.open(data,()=>{
+			console.log('open shared win ok!!!!!!!');
+			self.send({'tag':'tree', 'cmd':"opensharewinok"});
+		});
 	}
 	
 };
@@ -149,6 +188,7 @@ var win_option = {
 	onMessage:function(win, args){
 		var self = this;
 		var tag = args.tag;
+		var cfg = self.options.cfg;
 		if("inited" == tag){
 			args.tag = 'start';
 			self.account.check_state((isok, rs)=>{
@@ -156,6 +196,10 @@ var win_option = {
 				args['rs'] = rs
 				args['point'] = helpers.point;
 				args['version'] = self.options.version;
+				args['os'] = {
+					'version': self.options.version,
+					'platform': cfg.get('platform')
+				};
 				self.send(args);
 			});
 		} else if("started" == tag){
@@ -190,6 +234,8 @@ var win_option = {
 				args.tag = 'login';
 				self.send(args);
 			});
+		} else if('win' == tag){
+			win_action.apply(self, [args]);
 		}
 	},
 	onDestroy:function(win){
@@ -241,11 +287,30 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+// var env_kv = process.env;
+// console.log('env_kv:', env_kv);
+var hn = os.hostname();
+var sysversion = os.release();
+//"userAgent": "pc;pc-mac;10.13.6;macbaiduyunguanjia"
+var netdiskversion = '2.1';
+var default_cfg_items = [{'key':'platform', 'value': process.platform, 'name':'platform'},
+							{'key':'hostname', 'value': hn, 'name':'hostname'},
+							{'key':'sysversion', 'value': sysversion, 'name':'sysversion'},
+							{'key':'netdiskversion', 'value': netdiskversion, 'name':'netdiskversion'},
+							{'key':'app_data_dir', 'value': app_data_dir, 'name':'应用根目录'}, 
+							{'key':'data_dir', 'value': data_dir, 'name':'应用数据目录'},
+							{'key':'download_dir', 'value': download_dir, 'name':'应用资源下载目录'},
+							{'key':'patch_data_dir', 'value': patch_data_dir, 'name':'补丁下载目录'}
+						];
+// console.log('default_cfg_items:', default_cfg_items);
 let tray = null;
 function build_tray(){
 	const icon = nativeImage.createFromDataURL('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAYAAACNiR0NAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAAsSAAALEgHS3X78AAABvElEQVQ4y4XUu2tUQRQG8N/u3s0aXR+QSsVHK4K96SRgCvHRCIGIYILiI+BfYWWthbHzCeILLVTEwkKtBQshopjKQsOKD4yrazGzeB3uHT8YLnPuN9/MmfOdaWAaR3AJPaxAEy0M4viCQ/iNWxiN/9v+ooE1YnAHxtRjExYxJ4+5Aj/xsrTLoIJ4HK+wkBEbx0QzCVaJTWItLmN9RvAUHjfl0cJp3MYHFDW8SazG1f8JzuAjXmALvlVwmkJRb2IpJ7gOUziPrzHtHxW8PViFe0P13J0s4HlMvcBywhkVbHcNn2TuZDsmMBvnI+jgV8LbL/j2Rjn/FA2cwBO8LcXbgrGH6OIALgrWqxUcx1acSzZp+9dW++Kd3k8rlGIWd7GUCBbox3krCl5PF6eCe4V+vJLEh307TPkwvuNBTrCLk0JHpH4r4ugJlZ0SKjvICc4I3XCn4hqacfEiDsbvIzVE2ChY4IJqjOAzNmB3zEJO8Bhe41mG9x674umeymCb4LnNGU4HZ/EwnrKMRkqeF4pBqGSVlVbiHc7UbDiGnegUwivyRujdruC1foncjwt6wiNxVGi3vlCo5bhuGvN/AMd/Wh7S3ewfAAAAAElFTkSuQmCC');
 	tray = new Tray(icon)
 	const contextMenu = Menu.buildFromTemplate([
+		{label: '加入会员', click: ()=>{if(contact_action)contact_action("可索取全部资源!");}},
+		{label: '申请代理', click: ()=>{if(contact_action)contact_action("可索取全部资源,可发展会员!");}},
+		{ type: 'separator'},
 	  { label: '退出',click: ()=>{app.quit();}},
 	  { label: '版本:'+app.getVersion()}
 	])
@@ -258,18 +323,17 @@ app.on('ready', ()=>{
 	build_tray();
 	var looper = helpers.looper;
 	var app_version = app.getVersion();
-	console.log('db data_dir:', data_dir);
+	// console.log('db data_dir:', data_dir);
 	dao.initDatabase(data_dir, looper, ()=>{
 		const Account = require('./account.js');
 		const Nsproxy = require('./nsproxy.js');
 		const Nsloader = require('./nsloader.js');
 		const AppCfg = require("./appcfg.js");
 		const Cookies = require('./cookies.js');
+		const Sharewin = require('./sharewin.js');
 		
-		console.log("hn:",os.hostname());
 		var appcfg = new AppCfg(patch_data_dir,{'version': app_version});
 		appcfg.init((cfg)=>{
-			console.log('init ok!');
 			interceptHttp();
 			var cookies = new Cookies({'cfg': appcfg, 'logger': logger});
 			var final_call = ()=>{
@@ -280,8 +344,9 @@ app.on('ready', ()=>{
 				var nsproxy = new Nsproxy(account,{'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger});
 				var nsloader = new Nsloader(account, {'point': point, 'cfg': appcfg, 'looper': looper, 'nsproxy':nsproxy, 'logger': logger});
 				var vplayer = new VideoPlayer(account, {'cfg': appcfg, 'logger': logger});
+				var sharewin = new Sharewin(account, {'cfg': appcfg, 'logger': logger, 'cookies':cookies});
 				vplayer.init();
-				
+				sharewin.init();
 				var index_addr = cfg.get('index');
 				if(!index_addr || index_addr.length>0) index_addr = '/dist/index.html';
 				var index_file_path = `${__dirname}${index_addr}`;
@@ -290,10 +355,12 @@ app.on('ready', ()=>{
 					index_file_path = `${__dirname}${index_addr}`;
 				}
 				var load_url = `file://${index_file_path}`;
-				console.log('load url:', load_url);
+				// console.log('load url:', load_url);
 				var g_win = new Window("OopsTeam", "renderer.js", load_url, account, {
 					'cfg': appcfg,
+					'nsproxy': nsproxy,
 					'nsloader':nsloader,
+					'sharewin':sharewin,
 					'vplayer':vplayer,
 					'logger': logger,
 					'version':app_version,
@@ -303,6 +370,7 @@ app.on('ready', ()=>{
 				nsloader.correct(()=>{
 					g_win.open();
 				});
+				/*
 				var delay_cnt = 60;
 				var delay_pos = 0;
 				looper.addListener('heart', (context)=>{
@@ -312,6 +380,7 @@ app.on('ready', ()=>{
 						console.log('tag:', context.name,',tm:', Date.now());
 					}
 				}, {'name': 'test'})
+				*/
 				bindonquit(()=>{
 					looper.stop();
 				});
@@ -326,17 +395,12 @@ app.on('ready', ()=>{
 				menu = Menu.buildFromTemplate(template)
 				Menu.setApplicationMenu(menu);
 			};
-			cfg.update('app_data_dir', app_data_dir, '应用根目录', ()=>{
-				cfg.update('data_dir', data_dir, '应用数据目录',()=>{
-					cfg.update('download_dir', download_dir, '应用资源下载目录',()=>{
-						cfg.update('patch_data_dir', patch_data_dir, '补丁下载目录',()=>{
-							// cookies.init(()=>{
-							// 	final_call();
-							// });
-							final_call();
-						});
-					});
+			helpers.iterator(default_cfg_items, (item, idx, cb)=>{
+				cfg.update(item.key, item.value, item.name, ()=>{
+					cb(true);
 				});
+			},(iscomplete, pos)=>{
+				final_call();
 			});
 			app.on('before-quit',(event)=>{
 				// event.preventDefault();
