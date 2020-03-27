@@ -5,14 +5,17 @@ const path = require('path');
 const fs = require('fs');
 const service = require('./service.js');
 
-var app_cfg_db = new Dao({'type':'list', 'name':'app_cfg',
-'fields':[{name:"id", type:'VARCHAR', len:20}, 
-	{name:"name", type:'VARCHAR', len:64},
-	{name:"val", type:'VARCHAR', len:1024},
-	{name:"type", type:'VARCHAR', len:10},
-	{name:"tm", type:'INT'}
-	]
-});
+var app_cfg_db = null;
+// new Dao({'type':'list', 'name':'app_cfg',
+// 'fields':[{name:"id", type:'VARCHAR', len:20}, 
+// 	{name:"name", type:'VARCHAR', len:64},
+// 	{name:"val", type:'VARCHAR', len:1024},
+// 	{name:"type", type:'VARCHAR', len:10},
+// 	{name:"tm", type:'INT'}
+// 	]
+// }, onInit:function(){
+	
+// });
 const CFG_SYNC_DELAY = 24*60*60*1000;
 const CFG_SYNC_TM = 'cfg_sync_tm';
 var appcfg = Base.extend({
@@ -363,4 +366,20 @@ var appcfg = Base.extend({
 		return JSON.stringify(this.cfg);
 	}
 });
+appcfg.newtable=function(callback){
+	app_cfg_db = new Dao({
+		'type':'list', 'name':'app_cfg',
+		'fields':[{name:"id", type:'VARCHAR', len:20}, 
+			{name:"name", type:'VARCHAR', len:64},
+			{name:"val", type:'VARCHAR', len:1024},
+			{name:"type", type:'VARCHAR', len:10},
+			{name:"tm", type:'INT'}
+		],
+		onInited:function(){
+			if(callback){
+				callback();
+			}
+		}
+	});
+};
 module.exports = appcfg;

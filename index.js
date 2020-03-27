@@ -333,79 +333,82 @@ app.on('ready', ()=>{
 		const Sharewin = require('./sharewin.js');
 		
 		var appcfg = new AppCfg(patch_data_dir,{'version': app_version});
-		appcfg.init((cfg)=>{
-			interceptHttp();
-			var cookies = new Cookies({'cfg': appcfg, 'logger': logger});
-			var final_call = ()=>{
-				looper.start();
-				var point = appcfg.get('point');
-				
-				var account = new Account({'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger, 'cookies':cookies});
-				var nsproxy = new Nsproxy(account,{'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger});
-				var nsloader = new Nsloader(account, {'point': point, 'cfg': appcfg, 'looper': looper, 'nsproxy':nsproxy, 'logger': logger});
-				var vplayer = new VideoPlayer(account, {'cfg': appcfg, 'logger': logger});
-				var sharewin = new Sharewin(account, {'cfg': appcfg, 'logger': logger, 'cookies':cookies});
-				vplayer.init();
-				sharewin.init();
-				var index_addr = cfg.get('index');
-				if(!index_addr || index_addr.length>0) index_addr = '/dist/index.html';
-				var index_file_path = `${__dirname}${index_addr}`;
-				if(!fs.existsSync(index_file_path)){
-					index_addr = '/dist/index.html';
-					index_file_path = `${__dirname}${index_addr}`;
-				}
-				var load_url = `file://${index_file_path}`;
-				// console.log('load url:', load_url);
-				var g_win = new Window("OopsTeam", "renderer.js", load_url, account, {
-					'cfg': appcfg,
-					'nsproxy': nsproxy,
-					'nsloader':nsloader,
-					'sharewin':sharewin,
-					'vplayer':vplayer,
-					'logger': logger,
-					'version':app_version,
-					win:win_option
-				});
-				nsloader.parent_win = g_win;
-				nsloader.correct(()=>{
-					g_win.open();
-				});
-				/*
-				var delay_cnt = 60;
-				var delay_pos = 0;
-				looper.addListener('heart', (context)=>{
-					delay_pos++;
-					if(delay_pos>=delay_cnt){
-						delay_pos = 0;
-						console.log('tag:', context.name,',tm:', Date.now());
+		AppCfg.newtable(()=>{
+			appcfg.init((cfg)=>{
+				interceptHttp();
+				var cookies = new Cookies({'cfg': appcfg, 'logger': logger});
+				var final_call = ()=>{
+					looper.start();
+					var point = appcfg.get('point');
+					
+					var account = new Account({'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger, 'cookies':cookies});
+					var nsproxy = new Nsproxy(account,{'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger});
+					var nsloader = new Nsloader(account, {'point': point, 'cfg': appcfg, 'looper': looper, 'nsproxy':nsproxy, 'logger': logger});
+					var vplayer = new VideoPlayer(account, {'cfg': appcfg, 'logger': logger});
+					var sharewin = new Sharewin(account, {'cfg': appcfg, 'logger': logger, 'cookies':cookies});
+					vplayer.init();
+					sharewin.init();
+					var index_addr = cfg.get('index');
+					if(!index_addr || index_addr.length>0) index_addr = '/dist/index.html';
+					var index_file_path = `${__dirname}${index_addr}`;
+					if(!fs.existsSync(index_file_path)){
+						index_addr = '/dist/index.html';
+						index_file_path = `${__dirname}${index_addr}`;
 					}
-				}, {'name': 'test'})
-				*/
-				bindonquit(()=>{
-					looper.stop();
-				});
-				cfg.check_upgrade();
-				contact_action = function(msg){
-					if(!lock_contact_btn){
-						var playload = {'tag':'contact', 'cmd':'invite', 'msg':msg};
-						g_win.send(playload);
-						lock_contact_btn = true;
+					var load_url = `file://${index_file_path}`;
+					// console.log('load url:', load_url);
+					var g_win = new Window("OopsTeam", "renderer.js", load_url, account, {
+						'cfg': appcfg,
+						'nsproxy': nsproxy,
+						'nsloader':nsloader,
+						'sharewin':sharewin,
+						'vplayer':vplayer,
+						'logger': logger,
+						'version':app_version,
+						win:win_option
+					});
+					nsloader.parent_win = g_win;
+					nsloader.correct(()=>{
+						g_win.open();
+					});
+					/*
+					var delay_cnt = 60;
+					var delay_pos = 0;
+					looper.addListener('heart', (context)=>{
+						delay_pos++;
+						if(delay_pos>=delay_cnt){
+							delay_pos = 0;
+							console.log('tag:', context.name,',tm:', Date.now());
+						}
+					}, {'name': 'test'})
+					*/
+					bindonquit(()=>{
+						looper.stop();
+					});
+					cfg.check_upgrade();
+					contact_action = function(msg){
+						if(!lock_contact_btn){
+							var playload = {'tag':'contact', 'cmd':'invite', 'msg':msg};
+							g_win.send(playload);
+							lock_contact_btn = true;
+						}
 					}
-				}
-				menu = Menu.buildFromTemplate(template)
-				Menu.setApplicationMenu(menu);
-			};
-			helpers.iterator(default_cfg_items, (item, idx, cb)=>{
-				cfg.update(item.key, item.value, item.name, ()=>{
-					cb(true);
+					menu = Menu.buildFromTemplate(template)
+					Menu.setApplicationMenu(menu);
+				};
+				helpers.iterator(default_cfg_items, (item, idx, cb)=>{
+					cfg.update(item.key, item.value, item.name, ()=>{
+						cb(true);
+					});
+				},(iscomplete, pos)=>{
+					final_call();
 				});
-			},(iscomplete, pos)=>{
-				final_call();
-			});
-			app.on('before-quit',(event)=>{
-				// event.preventDefault();
+				app.on('before-quit',(event)=>{
+					// event.preventDefault();
+				});
 			});
 		});
+		
 	});
 	
 });
