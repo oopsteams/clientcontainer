@@ -101,14 +101,15 @@ var Dao = Base.extend(
 				// console.log('create_sql:', create_sql);
 				this.db.run(create_sql, (err)=>{
 					if(indexs_fields.length>0){
-						indexs_fields.forEach((field_name, idx)=>{
+						helpers.iterator(indexs_fields, (field_name, idx, cb)=>{
 							var create_index_sql = util.format(create_table_index_format, field_name, ithis.name, field_name);
-							// console.log('create_index_sql:', create_index_sql);
 							ithis.db.run(create_index_sql, (err)=>{
-								if(onInited){
-									onInited();
-								}
+								cb(true);
 							});
+						}, (iscomplete, pos)=>{
+							if(onInited){
+								onInited();
+							}
 						});
 					} else {
 						if(onInited){
@@ -117,6 +118,10 @@ var Dao = Base.extend(
 					}
 				});
 				//CREATE INDEX index_name ON table_name (column_name);
+			} else {
+				if(onInited){
+					onInited();
+				}
 			}
 		},
 		find_field_by_name:function(name){
