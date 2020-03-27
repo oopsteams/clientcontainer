@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<link href="./lib/video-js.css" rel="stylesheet"/>
+		<link href="./lib/base.css" rel="stylesheet"/>
+		<script src="./lib/video.js"></script>
+		<script src="./lib/videojs-playlist.min.js"></script>
+		<style>
+			#my-video{
+				justify-content: center;
+				text-align: center;
+				margin: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="my-header"><img src="./assets/logo.png" class="my-logo"/></div>
+			<div class="my-body">
+				<video id="my-video" class="video-js" controls preload="auto"
+				width="400" height="300" data-setup="{}">
+				    <p class="vjs-no-js">
+				      To view this video please enable JavaScript, and consider upgrading to a
+				      web browser that
+				      <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+				    </p>
+				</video>
+			</div>
+		</div>
+	</body>
+	<script>
+		var video_player = null;
+		function init_ui(){
+			var video_obj = document.getElementById('my-video');
+			var cHeight = document.documentElement.clientHeight - 160;
+			var cWidth = document.documentElement.clientWidth - 0; 
+			video_obj.setAttribute('height', cHeight+'px');
+			video_obj.setAttribute('width', cWidth+'px');
+			window.global_context.addListener('player',function(args){
+				var cmd = args.cmd;
+				
+				if("init" == cmd){
+					var datas = args.datas;
+				}else if("sources" == cmd){
+					var sources = args.sources;
+					if(sources && video_player){
+						console.log('set sources:', video_player.playlist);
+						video_player.playlist([
+							{'sources':sources}
+						]);
+						video_player.playlist.autoadvance(0);
+					}
+				}
+				
+				// console.log('download args:', args);
+			}, false);
+			window.global_context.send({'tag':'player',"cmd": "sources"});
+		}
+		function __check__(){
+			if(window.global_context && window.global_context.addListener){
+				// console.log('global_context.addListener:',window.global_context.addListener);
+				window.global_context.addListener('start',function(params){
+					console.log("__check__ params:", params);
+					video_player = videojs('my-video');
+					window.video_player = video_player;
+					init_ui();
+				});
+				window.global_context.addListener('alert',function(args){
+					var msg = args.msg;
+					if(msg){
+					}
+				}, false);
+			} else {
+				setTimeout(__check__, 100);
+			}
+		}
+		__check__();
+	</script>
+</html>

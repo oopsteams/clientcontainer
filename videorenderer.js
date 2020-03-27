@@ -1,8 +1,9 @@
-const { remote, ipcRenderer, shell} = require('electron');
+const { remote, ipcRenderer } = require('electron');
 console.log('remote:',remote)
 if(remote){
 	var triggered_tags = {};
 	function send_message(payload){
+		console.log('send_message:', payload, ',msgPoint:', window.global_context.msgPoint);
 		ipcRenderer.send(window.global_context.msgPoint, payload);
 	}
 	function check_st(v){
@@ -11,27 +12,17 @@ if(remote){
 	function update_st(v){
 		window.global_context.st = v;
 	}
-	function init_ui(){
-		// var linkStyle = document.getElementsByTagName('link')[0];
-		// var sheet = linkStyle.sheet;
-		// var rules = sheet.cssRules;
-		// sheet.insertRule('.el-button--mini{padding: 0.125rem, 0.5625rem;}',0);
-	}
 	function onMessage(args){
 		var self = this;
 		var tag = args.tag;
 		if("start" == tag){
 			if(check_st(1)){
-				update_st(2);
+				var sources = args.sources;
+				
 				args.tag = 'started';
 				var rs = args.rs;
 				window.global_context.point = args.point;
-				window.global_context.lg_rs=args.lg_rs;
-				window.global_context.user=rs;
-				window.global_context.version = args.version;
-				window.global_context.os = args.os;
 				var params = [rs];
-				// console.log('trigger start:', params);
 				trigger("start", params);
 				trigger("login", params);
 				send_message(args);
@@ -50,7 +41,6 @@ if(remote){
 	function init(bind_point, bind_front_point){
 		if(check_st(0)){
 			update_st(1);
-			init_ui();
 			window.global_context.msgPoint = bind_point;
 			window.global_context.msgPointFront = bind_front_point;
 			ipcRenderer.on(window.global_context.msgPointFront, function(event, args){
@@ -93,9 +83,8 @@ if(remote){
 		'msgPointFront':'asyn-win-front',
 		'init':init,
 		'listeners':{},
-		'version':'0.0.0',
 		'send':send_message,
 		'addListener':addListener,
-		'openbrowser':function(url){if(url)shell.openExternal(url);}
+		'player': null
 	};
 }

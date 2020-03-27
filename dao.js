@@ -5,13 +5,12 @@ const sqlite3 = require('sqlite3').verbose();
 const os =  require('os');
 var path = require('path');
 var base_dir = os.homedir();
-var data_dir = path.join(base_dir, helpers.data_dir_name);
+// var data_dir = path.join(base_dir, helpers.data_dir_name);
 // const db_conn_timeout = 30 * 60 * 1000;
 const db_conn_timeout = 15 * 60 * 1000;
-const g_db_name = ".datas";
 const create_table_format = 'CREATE TABLE IF NOT EXISTS %s (%s)';
 const create_table_index_format = 'CREATE INDEX IF NOT EXISTS index_%s ON %s (%s)';
-const g_db_file_path = path.join(data_dir, g_db_name);
+var g_db_file_path = null;//path.join(data_dir, g_db_name);
 var last_update_tm = helpers.now();
 var g_db = null;
 var looper_listener = (p)=>{
@@ -19,28 +18,43 @@ var looper_listener = (p)=>{
 		// to close db.
 		console.log('db连接闲置超时,需要重连!');
 		if(g_db)Dao.close();
-		g_db = build_db_inst();
+		g_db = build_db_inst(p.looper);
 		last_update_tm = helpers.now();
 	}
 };
-var build_db_inst = ()=>{
-	return new sqlite3.Database(g_db_file_path,function(err) {
-		if(err){
-			const g_db = new sqlite3.Database(g_db_file_path,(err)=>{
-				if(err){
-					throw err;
-				} else {
-					console.log("创建DB成功!", g_db_file_path);
-					helpers.looper.addListener('sqlite3', looper_listener, {context:g_db, tm:helpers.now()});
-				}
-			});
-		} else {
-			console.log("创建DB成功!", g_db_file_path);
-			helpers.looper.addListener('sqlite3', looper_listener, {context:g_db, tm:helpers.now()});
+var build_db_inst = (looper, cb)=>{
+	if(g_db_file_path){
+		console.log('will open database:', g_db_file_path);
+		g_db = new sqlite3.Database(g_db_file_path,function(err) {
+			var rs = false;
+			if(err){
+				g_db = new sqlite3.Database(g_db_file_path,(err)=>{
+					if(err){
+						throw err;
+					} else {
+						rs = true;
+						console.log("创建DB成功!", g_db_file_path);
+						if(looper)looper.addListener('sqlite3', looper_listener, {context:g_db, "looper":looper});
+					}
+				});
+			} else {
+				rs = true;
+				console.log("创建DB成功!", g_db_file_path);
+				if(looper)looper.addListener('sqlite3', looper_listener, {context:g_db, "looper":looper});
+			}
+			if(cb){
+				cb(rs);
+			}
+		});
+	} else {
+		if(cb){
+			cb(false);
 		}
-	});
+		if(looper)looper.addListener('sqlite3', looper_listener, {context:g_db, "looper":looper});
+	}
+	return g_db;
 };
-g_db = build_db_inst();
+
 var before_call = ()=>{
 	if(!g_db){
 		console.log('重建 db 链接!');
@@ -58,10 +72,12 @@ var Dao = Base.extend(
 			this.db = g_db;
 			this.fields = options.fields;
 			this.id_field = null;
+			console.log('init table name:', this.name);
 			this.init();
 		},
 		init:function(){
 			var ithis = this;
+			var onInited = this.options.onInited;
 			if(this.fields){
 				var indexs_fields = [];
 				var fields_tokens = "";
@@ -82,12 +98,22 @@ var Dao = Base.extend(
 				});
 				// console.log("fields_tokens:",fields_tokens);
 				var create_sql = util.format(create_table_format, this.name, fields_tokens);
+				// console.log('create_sql:', create_sql);
 				this.db.run(create_sql, (err)=>{
 					if(indexs_fields.length>0){
 						indexs_fields.forEach((field_name, idx)=>{
 							var create_index_sql = util.format(create_table_index_format, field_name, ithis.name, field_name);
-							ithis.db.run(create_index_sql);
+							// console.log('create_index_sql:', create_index_sql);
+							ithis.db.run(create_index_sql, (err)=>{
+								if(onInited){
+									onInited();
+								}
+							});
 						});
+					} else {
+						if(onInited){
+							onInited();
+						}
 					}
 				});
 				//CREATE INDEX index_name ON table_name (column_name);
@@ -338,7 +364,7 @@ var Dao = Base.extend(
 			if(key && value){
 				var _f = this.find_field_by_name(key);
 				var query_rows = "select * from " + this.name + " where " + key + "=" + this.format_val_by_type(_f, value);
-				console.log("get query_rows:", query_rows);
+				// console.log("get query_rows:", query_rows);
 				ithis.db.get(query_rows, (err, row)=>{
 					if(cb){
 						if(row){
@@ -674,5 +700,10 @@ Dao.close = ()=>{
 	try{
 		// g_db.close();
 	} catch (e){}
+};
+Dao.initDatabase = (data_dir, looper, callback)=>{
+	var g_db_name = '.datas';
+	g_db_file_path = path.join(data_dir, g_db_name);
+	build_db_inst(looper, callback);
 };
 module.exports = Dao;

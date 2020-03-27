@@ -1,5 +1,4 @@
 const { BrowserWindow, ipcMain} = require('electron');
-const logger = require('electron-log');
 const cfg = require('electron-cfg');
 const helpers = require("./helper.core.js");
 const Base = require("./base.js")
@@ -23,6 +22,7 @@ var window_helper = Base.extend({
 		this.quit = false;
 		this.first_show = false;
 		this.logger = options&&options.logger?options.logger:console.log;
+		this.cfg = options&&options.cfg?options.cfg:null;
 		this.bindonquit = options?options.bindonquit:null;
 		this.msg_point = 'asyn-'+this.name;
 		this.msg_point_front = this.msg_point + '-front';
@@ -35,11 +35,12 @@ var window_helper = Base.extend({
 				if(self.win)self.win.close();
 			});
 		}
+		this.cookies = options&&options.cookies?options.cookies:null;
 	},
 	send:function(args){
 		var self = this;
 		if(self.win){
-			console.log('will send message:', self.msg_point_front, ',args tag:', args.tag);
+			// console.log('will send message:', self.msg_point_front, ',args tag:', args.tag);
 			self.win.webContents.send(self.msg_point_front, args);
 			return true;
 		}
@@ -67,6 +68,7 @@ var window_helper = Base.extend({
 		if(this.options && this.options.win && this.options.win.onDestroy){
 			this.options.win.onDestroy.apply(self, [win]);
 		}
+		if(this.cookies)this.cookies.sync();
 	},
 	onMessage:function(win, args){
 		var self = this;
@@ -74,6 +76,15 @@ var window_helper = Base.extend({
 		if(this.options && this.options.win && this.options.win.onMessage){
 			this.options.win.onMessage.apply(self, [win, args]);
 		}
+	},
+	close:function(){
+		var self = this;
+		if(self.win){
+			self.win.close();
+		}
+	},
+	update_url:function(url){
+		this.load_url = url;
 	},
 	open:function(){
 		var self = this;
@@ -89,11 +100,11 @@ var window_helper = Base.extend({
 			  closable:true,
 			  // transparent:true,
 			  // titleBarStyle: 'customButtonsOnHover',
-			  titleBarStyle:'hiddenInset',
-			  // titleBarStyle:'hidden',
+			  // titleBarStyle:'hiddenInset',
+			  titleBarStyle:'hidden',
 			  webPreferences: {
 			    nodeIntegration: true,
-			    webSecurity: false,
+			    // webSecurity: false,
 			    allowRunningInsecureContent: true,
 				preload: path.join(__dirname, self.renderer)
 			  }
@@ -123,9 +134,29 @@ var window_helper = Base.extend({
 			// console.log('args:', args);
 			self.onMessage(self.win, args);
 		};
-		this.win.webContents.openDevTools();
+		// openDevTools
+		// this.win.webContents.openDevTools();
+		
+		
 		ipcMain.on(self.msg_point, self.win_listener);
-		this.win.loadURL(self.load_url, {"userAgent": "pc;pc-mac;10.13.6;macbaiduyunguanjia"});
+		var loc_to_url = ()=>{
+			var ua = self.cfg.get_ua();
+			self.win.loadURL(self.load_url, {
+				"userAgent": ua
+			});
+		}
+		if(this.cookies){
+			this.cookies.init(self.win, ()=>{
+				loc_to_url();
+			});
+		} else {
+			console.log('cookies is null');
+			loc_to_url();
+		}
+		
+		// this.win.loadURL(self.load_url, {
+		// 	"httpReferrer": "http://www.oopsteam.site/"
+		// });
 	}
 });
 module.exports = window_helper;
