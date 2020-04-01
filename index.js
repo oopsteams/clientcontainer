@@ -10,6 +10,10 @@ const helpers = require("./helper.core.js");
 const Base = require("./base.js");
 const service = require('./service.js');
 const VideoPlayer = require('./videoplayer.js');
+
+var hn = os.hostname();
+var sysversion = os.release();
+
 const filter = {
   urls: ['https://hm.baidu.com/*']
 }
@@ -40,7 +44,24 @@ const Window = require('./window.js')
 
 const dao = require('./dao.js');
 unhandled();
-
+function get_browser_ua(){
+	var ua = '';
+	var app_ver = app.getVersion();
+	var _sysversion = sysversion.split('.').join('_');
+	var sys_core = 'Windows NT 6.1';
+	var platform = process.platform;
+	var os_name = platform;
+	if(platform == 'darwin'){
+		sys_core = 'Macintosh';
+		os_name = ' Intel Mac OS X ' + _sysversion;
+	} else {
+		os_name = ' ' + platform + '; ' + os.arch();
+	}
+	ua += 'IPBrowser/'+app_ver+' ';
+	ua +='('+sys_core+';'+os_name+')';
+	ua += ' ' + platform + '/' +sysversion + ' (KHTML, like Gecko) Chrome/'+process.versions.chrome;
+	return ua;
+}
 function interceptHttp(){
 	var self = this;
 	session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
@@ -52,6 +73,12 @@ function interceptHttp(){
 	  } else {
 			headers['Referer'] = 'http://www.oopsteam.site';
 	  }
+	  var app_ver = app.getVersion();
+	  var platform = process.platform;
+	  var _sysversion = sysversion.split('.').join('_');
+	  var ua = get_browser_ua();
+	  // console.log('ua:', ua);
+	  headers['User-Agent'] = ua;
 	  details.requestHeaders = headers;
 	  // console.log('url:', details.url, ',headers:', headers);
 	  callback({requestHeaders: headers});
@@ -289,8 +316,7 @@ app.on('window-all-closed', () => {
 });
 // var env_kv = process.env;
 // console.log('env_kv:', env_kv);
-var hn = os.hostname();
-var sysversion = os.release();
+
 //"userAgent": "pc;pc-mac;10.13.6;macbaiduyunguanjia"
 var netdiskversion = '2.1';
 var default_cfg_items = [{'key':'platform', 'value': process.platform, 'name':'platform'},
