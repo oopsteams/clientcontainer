@@ -137,14 +137,23 @@ if(remote){
 		if("start" == tag){
 			if(check_st(1)){
 				
-				init_ui();
+				
 				args.tag = 'started';
 				var rs = args.rs;
 				window.global_context.point = args.point;
 				var params = [rs];
-				trigger("start", params);
-				trigger("login", params);
-				send_message(args);
+				var redirect_uri = args.redirect;
+				console.log('redirect_uri:', redirect_uri);
+				console.log('location href:', document.location.href);
+				var current_loc = document.location.href;
+				if(current_loc.indexOf('file://')>=0 && redirect_uri){
+					document.location.href = redirect_uri;
+				} else {
+					init_ui();
+					trigger("start", params);
+					trigger("login", params);
+					send_message(args);
+				}
 			}
 		} else if("login" == tag){
 			var rs = args.rs;
