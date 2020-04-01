@@ -92,10 +92,10 @@ if(remote){
 		window.global_context.st = v;
 	}
 	function loop_check_elem(){
-		var elem = document.querySelector('#qdbbedr');
+		var elem = document.querySelector('input[id]');
 		if(elem){
 			//show alert
-			console.log('find elem:', elem);
+			// console.log('find elem:', elem);
 			if(window.global_context.share_info && window.global_context.share_info.shared){
 				elem.setAttribute('type', 'password');
 				elem.value = window.global_context.share_info.shared.pass;
@@ -140,6 +140,7 @@ if(remote){
 		// console.log('url address:',document.location.href);
 		dialog_ui = build_alert_ui();
 		send_message({'tag':'ui_ready', 'cmd':'uiok'});
+		// dialog_ui.show("正在进行三方验证,请耐心等候!!!!!", {'onclose':(ctx)=>{},'onready':(ctx)=>{}});
 		loop_check_elem();
 		
 	}
@@ -152,10 +153,16 @@ if(remote){
 				var rs = args.rs;
 				window.global_context.share_info = args.share_info;
 				var params = [rs];
-				init_ui();
-				trigger("start", params);
-				trigger("login", params);
-				send_message(args);
+				var redirect_uri = args.redirect;
+				var current_loc = document.location.href;
+				if(current_loc.indexOf('file://')>=0 && redirect_uri){
+					document.location.href = redirect_uri;
+				} else {
+					init_ui();
+					trigger("start", params);
+					trigger("login", params);
+					send_message(args);
+				}
 			}
 		} else if("login" == tag){
 			var rs = args.rs;
@@ -396,7 +403,7 @@ if(remote){
 		
 		}
 		function alertBaseInfo(info,type,msgtype, settings){
-				var width=340,height=120;
+				var width=240,height=120;
 				// var dialogURL='/message/info.html?type='+type+'&msgtype='+msgtype+'&width='+(width)+'&height='+height+'&info='+encodeURI(info);
 				// var div = document.getElementById('alertDiv1');
 				// if(!div){div=document.createElement('div');div.id='alertDiv1';}
