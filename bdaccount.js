@@ -140,6 +140,8 @@ var win_option = {
 				args['lg_rs'] = isok
 				args['rs'] = rs
 				args['point'] = helpers.point;
+				var auth_dns_domain = inst.auth.auth_dns_domain;
+				args['redirect'] = auth_dns_domain + inst.auth.bdauth;
 				self.send(args);
 			});
 		} else if("started" == tag){
@@ -158,7 +160,7 @@ var bdaccount = Base.extend({
 		if(options){
 			this.cfg = options.cfg?options.cfg:{};
 		}
-		console.log('bdaccount auth:', auth);
+		// console.log('bdaccount auth:', auth);
 		this.auth = auth;
 		this.win = null;
 		this.callback = null;
@@ -166,8 +168,10 @@ var bdaccount = Base.extend({
 	init:function(){
 		var self = this;
 		if(!this.win){
-			var auth_dns_domain = self.auth.auth_dns_domain;
-			this.win = new Window("BdAccount", "bdrenderer.js", auth_dns_domain + self.auth.bdauth,
+			// var auth_dns_domain = self.auth.auth_dns_domain;
+			var load_url = `file://${__dirname}/bdpage.html`;
+			// auth_dns_domain + self.auth.bdauth
+			this.win = new Window("BdAccount", "bdrenderer.js", load_url,
 				this.account, {
 				'cookies':self.options.cookies,
 				'ctx':self,

@@ -26,6 +26,7 @@ var win_option = {
 				args['lg_rs'] = isok
 				args['rs'] = rs
 				args['point'] = helpers.point;
+				args['redirect'] = inst.share_info.shared.link;
 				self.send(args);
 			});
 		} else if("started" == tag){
@@ -51,8 +52,8 @@ var shared = Base.extend({
 	init:function(){
 		var self = this;
 		if(!this.win){
-			
-			this.win = new Window("BdShared", "sharerenderer.js", '#',
+			var load_url = `file://${__dirname}/bdpage.html`;
+			this.win = new Window("BdShared", "sharerenderer.js", load_url,
 				this.account, {
 				'cookies':self.options.cookies,
 				'ctx':self,
@@ -69,7 +70,7 @@ var shared = Base.extend({
 		if(this.win){
 			var link = self.share_info.shared.link;
 			var pass = self.share_info.shared.pass;
-			this.win.update_url(link);
+			// this.win.update_url(link);
 			this.win.open();
 			// gparams={'params':{}};
 			// send_msg = function(payload){
