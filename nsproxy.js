@@ -128,8 +128,8 @@ var nsproxy = Base.extend({
 						}
 					}
 					
-					console.log("fetch_file_info finish code:", code);
-					console.log("fetch_file_info finish header:", header);
+					// console.log("fetch_file_info finish code:", code);
+					// console.log("fetch_file_info finish header:", header);
 				}
 			});
 		};
@@ -139,6 +139,9 @@ var nsproxy = Base.extend({
 		});
 	},
 	fetch_file_info:function(item_id, callback){
+		this.fetch_file_view_info(item_id, true, callback);
+	},
+	fetch_file_view_info:function(item_id, fetch_real_url, callback){
 		var self = this;
 		var final_call = function(params){
 			if(params.error_code){
@@ -148,12 +151,18 @@ var nsproxy = Base.extend({
 				var item = params['item'];
 				var dlink = item.dlink;
 				if(item.pin == 0){
-					self.fetch_real_dlink(item,(succ, _item)=>{
-						_item.pin = 1;
-						put_to_cache(item_id, _item, ()=>{
-							callback({'id': item_id, 'item': _item})
+					if(fetch_real_url){
+						self.fetch_real_dlink(item,(succ, _item)=>{
+							_item.pin = 1;
+							put_to_cache(item_id, _item, ()=>{
+								callback({'id': item_id, 'item': _item})
+							});
 						});
-					});
+					} else {
+						put_to_cache(item_id, item, ()=>{
+							callback({'id': item_id, 'item': item})
+						});
+					}
 				} else {
 					callback({'id': item_id, 'item': item})
 				}
@@ -226,7 +235,7 @@ var nsproxy = Base.extend({
 			service.server_get(rs.tk, 'async/checkstate', {}, (err, raw)=>{
 				if(!err){
 					var body = JSON.parse(raw);
-					console.log("check_ready_state body:", body);
+					// console.log("check_ready_state body:", body);
 					var _rs = {};
 					for(var k in body){
 						_rs[k] = body[k];

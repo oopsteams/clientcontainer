@@ -68,7 +68,7 @@ var videoplayer = Base.extend({
 			}
 		}
 		if(this.win){
-			console.log('videoplayer open task:', task);
+			// console.log('videoplayer open task:', task);
 			this.win.open();
 		}
 	}

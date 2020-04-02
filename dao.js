@@ -78,6 +78,51 @@ var Dao = Base.extend(
 		init:function(){
 			var ithis = this;
 			var onInited = this.options.onInited;
+			var check_miss_fields = function(_cb){
+				check_sql = "PRAGMA table_info('"+ithis.name+"');";
+				Promise.resolve().then(()=>{
+					ithis.db.all(check_sql, (err, fds)=>{
+						if(fds && fds.length>0){
+							var need_patch_fields = [];
+							var o_fd_map = {};
+							fds.forEach((of, idx)=>{
+								o_fd_map[of.name] = of;
+							});
+							ithis.fields.forEach((f, index)=>{
+								if(f.name !='id' && !(f.name in o_fd_map)){
+									need_patch_fields.push(f);
+								}
+							});
+						}
+						if(need_patch_fields.length>0){
+							helpers.iterator(need_patch_fields, (pf, idx, confirmcb)=>{
+								var pf_sql = "ALTER TABLE "+ithis.name+" ADD COLUMN ";
+								pf_sql += "" + pf.name + " " + pf.type + (pf.hasOwnProperty('len')?"("+pf.len+")":"");
+								console.log(pf_sql);
+								ithis.db.run(pf_sql, (err)=>{
+									if(err){
+										console.log('alter table err:', err);
+									} else {
+										if(pf.index){
+											var create_index_sql = util.format(create_table_index_format, pf.name, ithis.name, pf.name);
+											ithis.db.run(create_index_sql, (err)=>{
+												confirmcb(true);
+											});
+										} else {
+											confirmcb(true);
+										}
+									}
+								});
+							},(iscomplete, pos)=>{
+								if(_cb)_cb();
+							});
+						} else {
+							if(_cb)_cb();
+						}
+					});
+				});
+				
+			};
 			if(this.fields){
 				var indexs_fields = [];
 				var fields_tokens = "";
@@ -100,6 +145,7 @@ var Dao = Base.extend(
 				var create_sql = util.format(create_table_format, this.name, fields_tokens);
 				// console.log('create_sql:', create_sql);
 				this.db.run(create_sql, (err)=>{
+					check_miss_fields();
 					if(indexs_fields.length>0){
 						helpers.iterator(indexs_fields, (field_name, idx, cb)=>{
 							var create_index_sql = util.format(create_table_index_format, field_name, ithis.name, field_name);

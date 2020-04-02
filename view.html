@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<link href="./lib/base.css" rel="stylesheet"/>
+		<script type="text/javascript">
+			// Promise.allSettled = Promise.allSettled || function(promises) {
+			//         return new Promise(function(resolve, reject) {
+			//             if (!Array.isArray(promises)) {
+			//                 return reject(
+			//                     new TypeError("arguments must be an array")
+			//                 );
+			//             }
+			//             var resolvedCounter = 0;
+			//             var promiseNum = promises.length;
+			//             var resolvedValues = new Array(promiseNum);
+			//             for (var i = 0; i < promiseNum; i++) {
+			//                 (function(i) {
+			//                     Promise.resolve(promises[i]).then(
+			//                         function(value) {
+			//                             resolvedCounter++;
+			//                             resolvedValues[i] = value;
+			//                             if (resolvedCounter == promiseNum) {
+			//                                 return resolve(resolvedValues);
+			//                             }
+			//                         },
+			//                         function(reason) {
+			//                             resolvedCounter++;
+			//                             resolvedValues[i] = reason;
+			//                             if (resolvedCounter == promiseNum) {
+			//                                 return reject(reason);
+			//                             }
+			//                         }
+			//                     );
+			//                 })(i);
+			//             }
+			//         });
+			// };
+		</script>
+		<script src="./lib/pdf.js"></script>
+		<style>
+			#my-video{
+				justify-content: center;
+				text-align: center;
+				margin: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="my-header"><img src="./assets/logo.png" class="my-logo"/></div>
+		<div class="my-body">
+			<div>
+			  <button id="prev">Previous</button>
+			  <button id="next">Next</button>
+			  &nbsp; &nbsp;
+			  <span>Page: <span id="page_num"></span> / <span id="page_count"></span></span>
+			</div>
+			<div>
+			  <canvas id="the-canvas" style="border: 1px solid black; direction: ltr;"></canvas>
+			</div>
+		</div>
+	</body>
+</html>
