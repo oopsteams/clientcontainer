@@ -1,13 +1,18 @@
 const { BrowserWindow, ipcMain} = require('electron');
-const cfg = require('electron-cfg');
+const _cfg = require('electron-cfg');
 const helpers = require("./helper.core.js");
 const Base = require("./base.js")
 const path = require('path');
-function update_win_options(options){
-	var winCfg_options = cfg.window().options();
+function update_win_options(options, winCfg){
+	var winCfg_options = winCfg.options();
+	// console.log('window winCfg_options:', winCfg_options);
 	if(winCfg_options.hasOwnProperty('x')){
 		options['x'] = winCfg_options['x'];
 		options['y'] = winCfg_options['y'];
+	}
+	if(winCfg_options.hasOwnProperty('width')){
+		options['width'] = winCfg_options['width'];
+		options['height'] = winCfg_options['height'];
 	}
 }
 var window_helper = Base.extend({
@@ -28,6 +33,7 @@ var window_helper = Base.extend({
 		this.msg_point_front = this.msg_point + '-front';
 		this.win_listener = null;
 		this.app_ready_done = false;
+		this.winCfg = null;
 		var self = this;
 		if(this.bindonquit){
 			this.bindonquit(()=>{
@@ -49,6 +55,9 @@ var window_helper = Base.extend({
 	onReady:function(win){
 		var self = this;
 		if(win){
+			if(this.winCfg){
+				this.winCfg.assign(win);
+			}
 			win.show();
 		}
 		if(!this.app_ready_done){
@@ -64,6 +73,9 @@ var window_helper = Base.extend({
 		var self = this;
 		if(self.win_listener){
 			ipcMain.removeListener(self.msg_point, self.win_listener);
+		}
+		if(this.winCfg){
+			this.winCfg.unassign(win);
 		}
 		if(this.options && this.options.win && this.options.win.onDestroy){
 			this.options.win.onDestroy.apply(self, [win]);
@@ -110,9 +122,16 @@ var window_helper = Base.extend({
 			  }
 			};
 			if(this.options && this.options.win){
+				var wp = win_options.webPreferences;
+				if(this.options.win.hasOwnProperty('webPreferences')){
+					helpers.extend(wp, this.options.win.webPreferences);
+					delete this.options.win['webPreferences'];
+				}
 				helpers.extend(win_options, this.options.win);
 			}
-			update_win_options(win_options);
+			this.winCfg = _cfg.window({'name': self.name});
+			update_win_options(win_options, this.winCfg);
+			// console.log('win_options:', win_options);
 			var _win = new BrowserWindow(win_options);
 			this.win = _win;
 			this.win.on('ready-to-show', ()=>{

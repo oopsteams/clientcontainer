@@ -39,6 +39,7 @@ var download_task_db = new Dao({'type':'list', 'name':'tasks',
 	{name:"total_length", type:'INT'},
 	{name:"type", type:'VARCHAR', len:10},
 	{name:"fuzzy_id", type:'VARCHAR', len:64},
+	{name:"source", type:'VARCHAR', len:20, index:true},
 	{name:"tm", type:'INT'}
 	]
 });
@@ -189,7 +190,7 @@ var nsSubTask = Base.extend({
 	},
 	save:function(cb){
 		var self = this;
-		console.log("sub task will save:", this.params['id']);
+		// console.log("sub task will save:", this.params['id']);
 		download_sub_task_db.get('id',this.params['id'],(_task)=>{
 			if(_task){
 				var start_at = self.params['start'];
@@ -758,45 +759,7 @@ var nstask = Base.extend({
 		if(page_count < min_thread_num){
 			page_count = min_thread_num;
 		}
-		ithis.query_tasker_list_from_local(this.task.id, (task_param_list)=>{
-			// ithis.pause();
-			// ithis.tasks = [];
-			// task_param_list.forEach((p)=>{
-			// 	console.log('task:', p.id, ',end:', p.end, ',state:',p.state);
-			// 	
-			// 	ithis.tasks.push(new Tasker(ithis, p));
-			// });
-			// console.log('task_param_list:', task_param_list);
-			helpers.iterator(task_param_list, (p, idx, cb)=>{
-				// console.log('init sub param:', p);
-				ithis.recover_sub_task(p, ()=>{
-					cb(true);
-				});
-			}, (rs, idx)=>{
-				if(!ithis.tasks || ithis.tasks.length==0){
-					var l = loader_list[0];
-					ithis._update_rdlink(l,(rdlink, params)=>{
-						// update type
-						if(params && params.hasOwnProperty('type')){
-							ithis.update_type(params['type'],()=>{
-								query_file_head_callback(rdlink, params);
-							});
-						} else {
-							ithis.nsloader.send({'tag':'alert', 'msg': '文件头信息获取失败,稍后请重试!'});
-						}
-						
-					});
-					// ithis.nsloader.query_file_head(loader_list[0]['dlink'], query_file_head_callback, 'pan.baidu.com');
-				}else{
-					console.log('active_tasks will start tasker!!');
-					ithis.start_tasker(()=>{
-						//show dialog
-						console.log('send show_dialog!!!!');
-						//ithis.sender.send('asynchronous-reply', {'id': item.fs_id, 'tag': 'show_dialog'});
-					});
-				}
-			});
-		});
+		
 		var query_file_head_callback = function(url, params){
 			if(url == null && params['info']){
 				// this.nsloader.send()
@@ -868,13 +831,57 @@ var nstask = Base.extend({
 								});
 								
 							});
+						} else {
+							ithis.start_tasker(()=>{
+								//show dialog
+								console.log('send show_dialog!!!!');
+								// ithis.sender.send('asynchronous-reply', {'id': item.fs_id, 'info': params['info'], 'tag': 'show_dialog'});
+								if(callback)callback();
+							});
 						}
 					});
 				});
-			};
-			
-			
+			};			
 		};
+		ithis.query_tasker_list_from_local(this.task.id, (task_param_list)=>{
+			// ithis.pause();
+			// ithis.tasks = [];
+			// task_param_list.forEach((p)=>{
+			// 	console.log('task:', p.id, ',end:', p.end, ',state:',p.state);
+			// 	
+			// 	ithis.tasks.push(new Tasker(ithis, p));
+			// });
+			// console.log('task_param_list:', task_param_list);
+			helpers.iterator(task_param_list, (p, idx, cb)=>{
+				// console.log('init sub param:', p);
+				ithis.recover_sub_task(p, ()=>{
+					cb(true);
+				});
+			}, (rs, idx)=>{
+				if(!ithis.tasks || ithis.tasks.length==0){
+					var l = loader_list[0];
+					ithis._update_rdlink(l,(rdlink, params)=>{
+						// update type
+						if(params && params.hasOwnProperty('type')){
+							ithis.update_type(params['type'],()=>{
+								query_file_head_callback(rdlink, params);
+							});
+						} else {
+							ithis.nsloader.send({'tag':'alert', 'msg': '文件头信息获取失败,稍后请重试!'});
+						}
+						
+					});
+					// ithis.nsloader.query_file_head(loader_list[0]['dlink'], query_file_head_callback, 'pan.baidu.com');
+				}else{
+					console.log('active_tasks will start tasker!!');
+					ithis.start_tasker(()=>{
+						//show dialog
+						console.log('send show_dialog!!!!');
+						//ithis.sender.send('asynchronous-reply', {'id': item.fs_id, 'tag': 'show_dialog'});
+					});
+				}
+			});
+		});
 	},
 	_update_rdlink:function(loader,callback){
 		var ithis = this;
@@ -940,7 +947,7 @@ var nstask = Base.extend({
 						service.server_get(rs.tk, _path, {"id": self.task.item_id}, (err, raw)=>{
 							if(!err){
 								var body = JSON.parse(raw);
-								console.log('dlink body:', body);
+								// console.log('dlink body:', body);
 								build_download_loader.apply(self, [body, ()=>{
 									final_call();
 								}]);
@@ -2378,9 +2385,10 @@ var nsloader = Base.extend({
 			if(rs){
 				callback(params['rdlink'], params);
 			} else {
-				self.update_state(-1, (_id, _p)=>{
-					callback(null, {info:"下载请求超时,请重新尝试!"})
-				});
+				// self.update_state(-1, (_id, _p)=>{
+					
+				// });
+				callback(null, {info:"下载请求超时,请重新尝试!"})
 			}
 		});
 	},
@@ -2462,33 +2470,39 @@ var nsloader = Base.extend({
 		'fuzzy_id': self.user_id,
 		'filename': item['filename'], 
 		// 'type':item['type'], 
+		'source': item['source'],
 		'tm': helpers.now()};
-		var id = task.id;
-		this.recover_nstask(task, (isnew, nst)=>{
-			console.log("recover_nstask return isnew:", isnew);
-			console.log("recover_nstask return nst:", nst.task);
-			if(isnew){
-				nst.emit_tag = function(){return true;};
-				nst.save_task(()=>{
-					if(callback){
-						callback(isnew, nst);
-					}
-					
-				});
-			} else {
-				if(callback){
-					callback(isnew, nst);
-				}
+		var final_call = (isnew, nst)=>{
+			if(callback){
+				callback(isnew, nst);
 			}
 			setTimeout(()=>{
 				nst.init_dlink(()=>{
 					nst.update_state(1, (id, params)=>{
 						console.log('new_download_nstask id:', id, ', params:', params);
 						nst.emit_tag = function(){return true};
+						if(isnew){
+							
+						} else {
+							
+						}
 						nst.active_tasks();
 					});
 				});
 			}, 1);
+		};
+		var id = task.id;
+		this.recover_nstask(task, (isnew, nst)=>{
+			console.log("recover_nstask return isnew:", isnew);
+			// console.log("recover_nstask return nst:", nst.task);
+			if(isnew){
+				nst.save_task(()=>{
+					final_call(isnew, nst);
+				});
+			} else {
+				final_call(isnew, nst);
+			}
+			
 		});
 	},
 	_parse_task_state:function(nst, callback){
@@ -2518,12 +2532,27 @@ var nsloader = Base.extend({
 			callback(false, result);
 		}
 	},
+	_check_task_exist_by_source_fs_id:function(fs_id){
+		var self = this;
+		if(self.task_map.hasOwnProperty(fs_id)){
+			var nst = self.task_map[fs_id];
+			return nst;
+		}
+		for(var _fsid in self.task_map){
+			var nst = self.task_map[_fsid];
+			if(nst.task.source == fs_id){
+				return nst;
+			}
+		}
+		return null;
+	},
 	new_download_ready:function(data, callback){
 		var self = this;
 		var task_id = data.fs_id;
 		console.log('new_download_ready task_id:', task_id);
-		if(self.task_map.hasOwnProperty(task_id)){
-			var nst = self.task_map[task_id];
+		var has_nst = self._check_task_exist_by_source_fs_id(task_id);
+		if(has_nst){
+			var nst = has_nst;
 			self._parse_task_state(nst, callback);
 		} else {
 			self.account.check_state((isok, rs)=>{
@@ -2564,8 +2593,9 @@ var nsloader = Base.extend({
 		var self = this;
 		var task_id = data.fs_id;
 		console.log('check_ready_state task_id:', task_id);
-		if(self.task_map.hasOwnProperty(task_id)){
-			var nst = self.task_map[task_id];
+		var has_nst = self._check_task_exist_by_source_fs_id(task_id);
+		if(has_nst){
+			var nst = has_nst;
 			self._parse_task_state(nst, callback);
 		} else {
 			console.log('nsloader check_ready_state in:', task_id);

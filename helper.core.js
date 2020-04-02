@@ -507,39 +507,12 @@ var helpers = {
 		cb();
 	},
 	opengzip:function(zippath, target_dir, callback){
-		// fs.createReadStream(zippath).pipe(
-		//   tar.x({
-		//     strip: 1,
-		//     C: target_dir // alias for cwd:'some-dir', also ok
-		//   }, null, callback)
-		// )
-		
 		tar.x({
 			file: zippath,
 		  strip: 1,
 		  C: target_dir // alias for cwd:'some-dir', also ok
 		}).then(()=>{callback('ok')});
 		
-		
-		// var gunzip = zlib.createGunzip();
-		// var inflate = zlib.createInflate();
-		// var inFile = fs.createReadStream(zippath);
-		// var outFile = fs.createWriteStream(target_dir);
-		// inFile.pipe(gunzip).pipe(outFile);
-		// inFile.pipe(inflate).pipe(outFile);
-		// callback(false, true);
-		// if(fs.existsSync(zippath)){
-		// 	var extract = unzip.Extract({path: target_dir});
-		// 	extract.on('finish', function(){
-		// 		callback(false, true);
-		// 	});
-		// 	extract.on('error', (err)=>{
-		// 		callback(err, false)
-		// 	});
-		// 	fs.createReadStream(zippath).pipe(extract);
-		// } else {
-		// 	callback('can not find zip file!', false);
-		// }
 	}
 };
 module.exports = helpers;
