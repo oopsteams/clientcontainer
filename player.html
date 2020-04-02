@@ -20,7 +20,7 @@
 			<div class="my-header"><img src="./assets/logo.png" class="my-logo"/></div>
 			<div class="my-body">
 				<video id="my-video" class="video-js" controls preload="auto"
-				width="400" height="300" data-setup="{}">
+				width="410" height="300" data-setup="{}">
 				    <p class="vjs-no-js">
 				      To view this video please enable JavaScript, and consider upgrading to a
 				      web browser that
@@ -33,11 +33,17 @@
 	<script>
 		var video_player = null;
 		function init_ui(){
-			var video_obj = document.getElementById('my-video');
-			var cHeight = document.documentElement.clientHeight - 160;
+			var video_container = document.getElementById('my-video');
+			var cHeight = document.documentElement.clientHeight - 45;
 			var cWidth = document.documentElement.clientWidth - 0; 
-			video_obj.setAttribute('height', cHeight+'px');
-			video_obj.setAttribute('width', cWidth+'px');
+			var video_obj = video_container.querySelector('video');
+			if(video_obj){
+				video_obj.style.height = cHeight+'px';
+				video_obj.style.width = (cWidth-2)+'px';
+				video_container.style.height = cHeight+'px';
+				video_container.style.width = (cWidth-2)+'px';
+			}
+			
 			window.global_context.addListener('player',function(args){
 				var cmd = args.cmd;
 				

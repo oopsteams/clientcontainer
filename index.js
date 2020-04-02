@@ -10,6 +10,10 @@ const helpers = require("./helper.core.js");
 const Base = require("./base.js");
 const service = require('./service.js');
 const VideoPlayer = require('./videoplayer.js');
+
+var hn = os.hostname();
+var sysversion = os.release();
+
 const filter = {
   urls: ['https://hm.baidu.com/*']
 }
@@ -40,7 +44,24 @@ const Window = require('./window.js')
 
 const dao = require('./dao.js');
 unhandled();
-
+function get_browser_ua(){
+	var ua = '';
+	var app_ver = app.getVersion();
+	var _sysversion = sysversion.split('.').join('_');
+	var sys_core = 'Windows NT 6.1';
+	var platform = process.platform;
+	var os_name = platform;
+	if(platform == 'darwin'){
+		sys_core = 'Macintosh';
+		os_name = ' Intel Mac OS X ' + _sysversion;
+	} else {
+		os_name = ' ' + platform + '; ' + os.arch();
+	}
+	ua += 'IPBrowser/'+app_ver+' ';
+	ua +='('+sys_core+';'+os_name+')';
+	ua += ' ' + platform + '/' +sysversion + ' (KHTML, like Gecko) Chrome/'+process.versions.chrome;
+	return ua;
+}
 function interceptHttp(){
 	var self = this;
 	session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
@@ -52,6 +73,12 @@ function interceptHttp(){
 	  } else {
 			headers['Referer'] = 'http://www.oopsteam.site';
 	  }
+	  var app_ver = app.getVersion();
+	  var platform = process.platform;
+	  var _sysversion = sysversion.split('.').join('_');
+	  var ua = get_browser_ua();
+	  // console.log('ua:', ua);
+	  headers['User-Agent'] = ua;
 	  details.requestHeaders = headers;
 	  // console.log('url:', details.url, ',headers:', headers);
 	  callback({requestHeaders: headers});
@@ -122,8 +149,12 @@ var task_action = function(args){
 		});
 	} else if('play' == cmd){
 		var data = args.data;
-		console.log('play data:', data);
+		// console.log('play data:', data);
 		self.options.vplayer.open(data);
+	} else if('view' == cmd){
+		var data = args.data;
+		// console.log('view args:', args);
+		self.options.viewpage.open(data);
 	}
 }
 
@@ -143,8 +174,14 @@ var file_action = function(args){
 	var self = this;
 	var cmd = args.cmd;
 	if("info" == cmd){
+		var data = args.data;
 		setTimeout(()=>{
-			nsproxy.fetch_file_info(args.id,(rs)=>{
+			var media_type = data.media_type;
+			var fetch_real_url = true;
+			if('image' == media_type){
+				fetch_real_url = false;
+			}
+			self.options.nsproxy.fetch_file_view_info(args.id,fetch_real_url, (rs)=>{
 				// console.log("nsproxy cb rs:", rs);
 				self.send({'tag':'tree', 'id':args.id, 'data': rs, 'cmd':args.cmd});
 			});
@@ -289,8 +326,7 @@ app.on('window-all-closed', () => {
 });
 // var env_kv = process.env;
 // console.log('env_kv:', env_kv);
-var hn = os.hostname();
-var sysversion = os.release();
+
 //"userAgent": "pc;pc-mac;10.13.6;macbaiduyunguanjia"
 var netdiskversion = '2.1';
 var default_cfg_items = [{'key':'platform', 'value': process.platform, 'name':'platform'},
@@ -331,6 +367,7 @@ app.on('ready', ()=>{
 		const AppCfg = require("./appcfg.js");
 		const Cookies = require('./cookies.js');
 		const Sharewin = require('./sharewin.js');
+		const Viewpage = require('./viewpage.js');
 		
 		var appcfg = new AppCfg(patch_data_dir,{'version': app_version});
 		AppCfg.newtable(()=>{
@@ -340,14 +377,15 @@ app.on('ready', ()=>{
 				var final_call = ()=>{
 					looper.start();
 					var point = appcfg.get('point');
-					
 					var account = new Account({'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger, 'cookies':cookies});
 					var nsproxy = new Nsproxy(account,{'point': point, 'cfg': appcfg, 'looper': looper, 'logger': logger});
 					var nsloader = new Nsloader(account, {'point': point, 'cfg': appcfg, 'looper': looper, 'nsproxy':nsproxy, 'logger': logger});
 					var vplayer = new VideoPlayer(account, {'cfg': appcfg, 'logger': logger});
 					var sharewin = new Sharewin(account, {'cfg': appcfg, 'logger': logger, 'cookies':cookies});
+					var viewpage = new Viewpage(account, {'cfg': appcfg, 'logger': logger, 'cookies':cookies});
 					vplayer.init();
 					sharewin.init();
+					viewpage.init();
 					var index_addr = cfg.get('index');
 					if(!index_addr || index_addr.length>0) index_addr = '/dist/index.html';
 					var index_file_path = `${__dirname}${index_addr}`;
@@ -363,6 +401,7 @@ app.on('ready', ()=>{
 						'nsloader':nsloader,
 						'sharewin':sharewin,
 						'vplayer':vplayer,
+						'viewpage':viewpage,
 						'logger': logger,
 						'version':app_version,
 						win:win_option
