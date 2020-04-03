@@ -159,6 +159,7 @@ var build_download_loader = function(datas, callback){
 }
 const section_max_size = 5 * 1024 * 1024;
 const section_min_size = 2* 1024 * 1024;
+const section_mini_min_size = 64 * 1024;
 const max_idle_cnt = 30;
 const max_counter = 8;
 const min_counter = 3;
@@ -729,6 +730,8 @@ var nstask = Base.extend({
 		this.last_get_size = 0;
 		this.exhaust = '';
 		this.speed = '0B';
+		this.section_min_size = section_min_size;
+		this.section_max_size = section_max_size;
 		this.need_clear_task_list = [];
 		this.download_file_path = path.join(this.nsloader.download_dir, ''+this.task.id)
 		// console.log('this.task:', this.task);
@@ -768,17 +771,21 @@ var nstask = Base.extend({
 				return;
 			}
 			var l = params['length'];
+			if(l < ithis.section_max_size && l> section_mini_min_size){
+				ithis.section_max_size = section_mini_min_size * 4;
+				ithis.section_min_size = section_mini_min_size * 2;
+			}
 			ithis.update_task('total_length', l);
 			item['total_length'] = l;
 			item['download'] = 0;
-			while(page_count>1 && l/page_count < section_min_size){
+			while(page_count>1 && l/page_count < ithis.section_min_size){
 			  page_count = page_count - 1;
 			}
 			console.log('page_count:', page_count);
 			item['tasks'] = [];
 			var page_size = Math.round(l/page_count);
-			if(page_size > section_max_size){
-				page_size = section_max_size;
+			if(page_size > ithis.section_max_size){
+				page_size = ithis.section_max_size;
 			}
 			helpers.iterator(loader_list, (l, idx, cb)=>{
 				ithis._update_rdlink(l,()=>{
@@ -812,13 +819,13 @@ var nstask = Base.extend({
 					i = page_count - 1;
 					var the_last_start = i*page_size;
 					var last_task_params = {'id':ithis.task.id+'_'+i, 'idx':i, 'source_id':ithis.task.id, 'start':the_last_start, 'end':l, 'over':0, 'retry':0, 'loader_id': loader_list[loader_index].id, 'state': 0};
-					if(l - the_last_start > section_max_size){
-						last_task_params = {'id':ithis.task.id+'_'+i, 'idx':i, 'source_id':ithis.task.id, 'start':the_last_start, 'end':the_last_start + section_max_size, 'over':0, 'retry':0, 'loader_id': loader_list[loader_index].id, 'state': 0};
+					if(l - the_last_start > ithis.section_max_size){
+						last_task_params = {'id':ithis.task.id+'_'+i, 'idx':i, 'source_id':ithis.task.id, 'start':the_last_start, 'end':the_last_start + ithis.section_max_size, 'over':0, 'retry':0, 'loader_id': loader_list[loader_index].id, 'state': 0};
 					}
 					console.log('recover_sub_task last_task_params:', last_task_params);
 					ithis.recover_sub_task(last_task_params, ()=>{
-						if(l - the_last_start > section_max_size){
-							var retain_section_start = the_last_start + section_max_size;
+						if(l - the_last_start > ithis.section_max_size){
+							var retain_section_start = the_last_start + ithis.section_max_size;
 							var retain_task_params = {'id':ithis.task.id+'_'+(i + 1), 'idx':i+1, 'source_id':ithis.task.id, 'start':retain_section_start, 'end':l, 'over':0, 'retry':0, 'loader_id': 0, 'state': 7};
 							item['tasks'].push(retain_task_params);
 							console.log('recover_sub_task retain_task_params:', retain_task_params);
@@ -1226,7 +1233,7 @@ var nstask = Base.extend({
 				console.log('find 7 state pos:', pos);
 				t.params.loader_id = loader.id;
 				t.params.state = 0;
-				var retain_section_start = t.params.start + section_max_size;
+				var retain_section_start = t.params.start + ithis.section_max_size;
 				var retain_section_end = t.params.end;
 				if(retain_section_end >= retain_section_start){
 					t.params.end = retain_section_start;
@@ -1304,7 +1311,7 @@ var nstask = Base.extend({
 					_sub_t_loader_id = loader.id;
 					var total_size = t.params.end - new_start;
 					var new_task_params_list = [];
-					if(total_size >= section_min_size * 2){
+					if(total_size >= ithis.section_min_size * 2){
 						var mid = Math.round(total_size/2);
 						new_task_params_list.push({'id':new_id_prefix + suffix, 'source_id':t.params.source_id, 'start':new_start, 'end':new_start+mid, 'over':0, 'idx':2, 'retry':0, 'loader_id': _sub_t_loader_id, 'state': 0, 'patch': 0});
 						new_task_params_list.push({'id':new_id_prefix + '0_' + suffix, 'source_id':t.params.source_id, 'start':new_start+mid, 'end':t.params.end, 'over':0, 'idx':2, 'retry':0, 'loader_id': _sub_t_loader_id, 'state': 0, 'patch': 0});
@@ -2481,11 +2488,12 @@ var nsloader = Base.extend({
 					nst.update_state(1, (id, params)=>{
 						console.log('new_download_nstask id:', id, ', params:', params);
 						nst.emit_tag = function(){return true};
-						if(isnew){
+						// if(isnew){
 							
-						} else {
+						// } else {
 							
-						}
+						// }
+						console.log('new download nstask will active tasks!!!!');
 						nst.active_tasks();
 					});
 				});
