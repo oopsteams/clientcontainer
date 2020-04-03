@@ -572,7 +572,7 @@ var nsSubTask = Base.extend({
 		};
 		this.try_close_pipe();
 		try{
-			console.log('will request url:', url);
+			// console.log('will request url:', url);
 			var rq = request(options);
 			this.pipe = rq.pipe(stream);
 			this.pipe.on("close", function(){
