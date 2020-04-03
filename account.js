@@ -82,7 +82,7 @@ var account = Base.extend({
 	},
 	check_state:function(callback){
 		var self = this;
-		console.log("check_state in.");
+		// console.log("check_state in.");
 		var final_call = ()=>{
 			if(self.user){
 				callback(true,{'logined':true, 'id':self.user.fuzzy_id,

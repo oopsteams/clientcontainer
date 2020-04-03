@@ -35,14 +35,14 @@ var appcfg = Base.extend({
 		var suf = ~~(Math.random() * 4);
 		ver = ver + '.' + suf;
 		var devices_idx = ~~(Math.random() * devices.length);
-		var ua = "netdisk;"+ver+";pc;"+devices[devices_idx]+";"+os_ver+";macbaiduyunguanjia";
+		var ua = "Netdisk;"+ver+";pc;"+devices[devices_idx]+";"+os_ver+";baiduyunguanjia";
 		return ua;
 	},
 	get_ua:function(){
 		var platform = this.get('platform');
 		var sysversion = this.get('sysversion');
 		var netdiskversion = this.get('netdiskversion');
-		var ua = "netdisk;"+netdiskversion+";pc;"+platform+";"+sysversion+";macbaiduyunguanjia";
+		var ua = "Netdisk;"+netdiskversion+";pc;"+platform+";"+sysversion+";baiduyunguanjia";
 		return ua;
 	},
 	check_upgrade_info:function(callback){
