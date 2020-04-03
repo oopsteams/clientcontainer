@@ -502,7 +502,7 @@ var nsSubTask = Base.extend({
 		  headers: headers
 		};
 		var check_rs_by_check_rs = (check_rs)=>{
-			ithis.update_state(0, ()=>{
+			ithis.update_state(4, ()=>{
 			  if(check_rs.hasOwnProperty('error_code')){
 				  console.log('error_code:', check_rs.error_code);
 				  if(31045 == check_rs.error_code){
@@ -520,6 +520,7 @@ var nsSubTask = Base.extend({
 									});
 							  });
 						  });
+						  return;
 					  }
 				  } else if([31626,31360].indexOf(check_rs.error_code) >=0 ){
 					  //check dlink,无须重试,直接等待重新分配loader
@@ -538,15 +539,21 @@ var nsSubTask = Base.extend({
 						  });
 					  });
 					  return;
-				  } else {
-					  // final_call();
 				  }
 				if(ithis.retry < tasker_retry_max){
 				  ithis.retry += 1;
-				  setTimeout(()=>{ithis.emit_loader_thread(loader);},3000);					  
+				  setTimeout(()=>{ithis.emit_loader_thread(loader);},10000);					  
 				} else {
 					download_loader_db.update_by_conditions_increment({'id':loader.id}, {'pin': 0}, {'used':-1},()=>{
 						console.log("error 文件["+fn+"]下载失败!", check_rs);
+						// ithis.update_state(3,()=>{
+						// 	final_call(3);
+						// });
+						setTimeout(()=>{
+							ithis.update_state(3,()=>{
+								final_call(3);
+							});
+						},5000);
 					});
 				}
 			  } else {
@@ -554,6 +561,11 @@ var nsSubTask = Base.extend({
 				  // console.log("error 文件["+fn+"]下载失败!", check_rs);
 				  download_loader_db.update_by_conditions_increment({'id':loader.id}, {'pin': 0}, {'used':-1},()=>{
 					console.log("error 文件["+fn+"]下载失败!", check_rs);
+					setTimeout(()=>{
+						ithis.update_state(3,()=>{
+							final_call(3);
+						});
+					},5000);
 				  });
 			  }
 			});
@@ -822,7 +834,7 @@ var nstask = Base.extend({
 					if(l - the_last_start > ithis.section_max_size){
 						last_task_params = {'id':ithis.task.id+'_'+i, 'idx':i, 'source_id':ithis.task.id, 'start':the_last_start, 'end':the_last_start + ithis.section_max_size, 'over':0, 'retry':0, 'loader_id': loader_list[loader_index].id, 'state': 0};
 					}
-					console.log('recover_sub_task last_task_params:', last_task_params);
+					// console.log('recover_sub_task last_task_params:', last_task_params);
 					ithis.recover_sub_task(last_task_params, ()=>{
 						if(l - the_last_start > ithis.section_max_size){
 							var retain_section_start = the_last_start + ithis.section_max_size;
@@ -988,12 +1000,15 @@ var nstask = Base.extend({
 	recover_sub_task:function(sub_task, callback){
 		var self = this;
 		var id = sub_task.id;
+		// console.log('recover_sub_task sub task id:', id);
 		if(self.sub_task_map.hasOwnProperty(id)){
+			// console.log(''+id, ', exits!!!');
 			callback(false, self.sub_task_map[id]);
 		} else {
 			new nsSubTask(sub_task, {onReady:(nst)=>{
 				self.tasks.push(nst);
 				self.sub_task_map[id] = nst;
+				// console.log('add new sub task:', id, ',tasks len:', self.tasks.length);
 				callback(true, nst);
 			}, context: self, 'point': self.point});
 		}
@@ -1417,6 +1432,7 @@ var nstask = Base.extend({
 			});
 		}
 		this.update_state(3);
+		ithis.nsloader.looper.removeListener(ithis.task.id);
 	},
 	bind_listener:function(){
 		var ithis = this;
@@ -1478,9 +1494,11 @@ var nstask = Base.extend({
 			} else {
 				ithis.clean_tasks();
 				if(ithis.check_all_sub_task_state_is_complete()){
-					ithis.merge_final_file(()=>{
-						// ithis.sender.send('asynchronous-reply', {'id': ithis.task.id, 'over':all_over, 'task': ithis.task, 'tag':'sub_tasks', 'tasks_params':sub_task_params, 'total_length': total_length, 'total_file_size':total_file_size, "speed": speed, "need": exhaust});
-					});
+					setTimeout(()=>{
+						ithis.merge_final_file(()=>{
+							// ithis.sender.send('asynchronous-reply', {'id': ithis.task.id, 'over':all_over, 'task': ithis.task, 'tag':'sub_tasks', 'tasks_params':sub_task_params, 'total_length': total_length, 'total_file_size':total_file_size, "speed": speed, "need": exhaust});
+						});
+					}, 3000);
 					return true;
 				} else {
 					return false;
@@ -1524,8 +1542,8 @@ var nstask = Base.extend({
 			var fn = t.params.id;
 			var file_path = path.join(ithis.download_file_path, fn);
 			var t_size = t.check_file_size();
-			// console.log('t_size:', t_size, ',fn:', t.params.id);
-			if(t.check_file_size()>0){
+			console.log('t_size:', t_size, ',fn:', t.params.id);
+			if(t_size>0){
 				all_sub_files.push(file_path);
 				all_sub_tasks.push(t);
 			}
@@ -1588,7 +1606,15 @@ var nstask = Base.extend({
 			}, 1000);
 		} else {
 			console.log('合并失败!!!!!!!!!!!!!!!!!!!!');
-			if(final_cb)final_cb();
+			if(!ithis.retry_merge){
+				ithis.retry_merge = 1;
+				setTimeout(()=>{
+					ithis.merge_final_file(final_cb);
+				}, 3000);
+			} else {
+				if(final_cb)final_cb();
+			}
+			
 		}
 	},
 	_re_call_emit_loader_thread: function(subtasks, fc){
@@ -1866,7 +1892,7 @@ var nstask = Base.extend({
 		var idx_list = [];
 		for(var i=0;i<self.tasks.length;i++){
 			var t=self.tasks[i];
-			if(dirty_tasks.indexOf(t)<0){
+			if(dirty_tasks.indexOf(t)>=0){
 				idx_list.push(i);
 			}
 		}
@@ -1879,7 +1905,7 @@ var nstask = Base.extend({
 					if(dirty_tasks.indexOf(t)<0){
 						self.tasks.push(t);
 					} else {
-						delete this.sub_task_map[t.id];
+						delete this.sub_task_map[t.params.id];
 					}
 				}
 			});
@@ -2226,11 +2252,17 @@ var nstask = Base.extend({
 		// 	// ithis._show_alert('测试一下!')
 		// });
 		var final_call = function(v){
-			this.update_state(9, ()=>{
+			if(v == 1){// err
 				if(cb){
 					cb(v);
 				}
-			});
+			} else {
+				ithis.update_state(9, ()=>{
+					if(cb){
+						cb(v);
+					}
+				});
+			}
 		};
 		var default_path = this.nsloader.cfg.get('default_save_path');
 		function _move_file(default_path){
@@ -2713,6 +2745,9 @@ var nsloader = Base.extend({
 	checkout_tasks:function(){
 		var self = this;
 		var datas = [];
+		self.tasks.sort(function(t_a, t_b){
+					return t_b.task["tm"] - t_a.task["tm"];
+				});
 		self.tasks.forEach((t, idx)=>{
 			if(t && t.compute_progress && typeof(t.compute_progress) == 'function'){
 				datas.push(t.compute_progress());

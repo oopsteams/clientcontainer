@@ -171,7 +171,7 @@ var nsproxy = Base.extend({
 		var fetch_by_req = (tk)=>{
 			service.server_get(tk, 'source/finfo', {id: item_id}, (err, raw)=>{
 				var body = JSON.parse(raw);
-				console.log("body:", body);
+				// console.log("body:", body);
 				if(body && body.hasOwnProperty('item')){
 				  var item = body['item'];
 				  item['pin']=0;
