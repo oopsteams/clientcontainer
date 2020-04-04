@@ -16,11 +16,12 @@ var app_cfg_db = null;
 // }, onInit:function(){
 	
 // });
-const CFG_SYNC_DELAY = 24*60*60*1000;
+// const CFG_SYNC_DELAY = 8*60*60*1000;
+const CFG_SYNC_DELAY = 2*60*1000;
 const CFG_SYNC_TM = 'cfg_sync_tm';
 var appcfg = Base.extend({
 	constructor:function(download_dir, options){
-		this.points = options?options.points:helpers.points;
+		this.points = options&&options.points?options.points:helpers.points;
 		this.options = options;
 		this.base_dir = download_dir;
 		this.core_loading = false;
@@ -199,13 +200,13 @@ var appcfg = Base.extend({
 		// console.log(CFG_SYNC_TM+' v:', v)
 		if(helpers.now() - v>CFG_SYNC_DELAY){
 			self.update(CFG_SYNC_TM, helpers.now(), CFG_SYNC_TM);
-			// console.log('will call service!');
+			// console.log('will call service! self.points:', self.points);
 			//call service
-			service.check_service(self.points, (point, app_cfg)=>{
+			service.check_service(self.points, {'platform': process.platform}, (point, app_cfg)=>{
 				if(point){
 					helpers.point = point;
 				}
-				console.log('helpers point:', helpers.point);
+				// console.log('_sync helpers point:', helpers.point, ',remote app_cfg:', app_cfg);
 				if(app_cfg){
 					var next_up = (c, cb)=>{
 						// console.log('update key:', c.key, ',val:', c.val, ',n:', c.name);

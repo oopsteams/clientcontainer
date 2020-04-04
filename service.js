@@ -240,7 +240,7 @@ var api = {
 		});
 		req.end();
 	},
-	check_service:function(points, callback){
+	check_service:function(points, params, callback){
 		var path = 'open/cfg';
 		if(!points || points.length==0){
 			if(callback)callback(null, null);
@@ -268,6 +268,11 @@ var api = {
 			}
 			var _point = points[pos];
 			var url = new URL.URL(_point + path);
+			if(params){
+				for(var k in params){
+					url.searchParams.append(k, params[k]);
+				}
+			}
 			var options = {
 				href: url.href,
 				origin: url.origin,
@@ -278,6 +283,7 @@ var api = {
 				port: url.port
 			};
 			helpers.extend(options, opt);
+			
 			var client_http_engine = http;
 			if(options.protocol.indexOf('https:')>=0){
 				client_http_engine = https;
