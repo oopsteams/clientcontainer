@@ -16,8 +16,8 @@ var app_cfg_db = null;
 // }, onInit:function(){
 	
 // });
-// const CFG_SYNC_DELAY = 8*60*60*1000;
-const CFG_SYNC_DELAY = 2*60*1000;
+const CFG_SYNC_DELAY = 8*60*60*1000;
+// const CFG_SYNC_DELAY = 2*60*1000;
 const CFG_SYNC_TM = 'cfg_sync_tm';
 var appcfg = Base.extend({
 	constructor:function(download_dir, options){
@@ -105,7 +105,6 @@ var appcfg = Base.extend({
 		var new_ver_val = self.get('version');
 		console.log('check_upgrade old_ver_val:', old_ver_val, ',new_ver_val:',new_ver_val);
 		if(old_ver_val < new_ver_val){
-			console.log('need_to_load new lib!!!!');
 			var upurl = self.get('upurl');
 			if(upurl.substring(upurl.length-1) != '/') upurl+='/';
 			var lib_url = upurl + 'v'+new_ver_val+'.tar.gz';
