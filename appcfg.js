@@ -208,7 +208,7 @@ var appcfg = Base.extend({
 				// console.log('_sync helpers point:', helpers.point, ',remote app_cfg:', app_cfg);
 				if(app_cfg){
 					var next_up = (c, cb)=>{
-						// console.log('update key:', c.key, ',val:', c.val, ',n:', c.name);
+						console.log('update key:', c.key, ',val:', c.val, ',n:', c.name);
 						self.update(c.key, c.val, c.name, ()=>{
 							cb(true);
 						}, c.type);
