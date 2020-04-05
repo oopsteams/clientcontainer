@@ -17,7 +17,8 @@ var sysversion = os.release();
 const filter = {
   urls: ['https://hm.baidu.com/*']
 }
-var base_dir = os.homedir();
+// var base_dir = os.homedir();
+var base_dir = path.resolve(process.execPath, '..');
 var app_data_dir = path.join(base_dir, helpers.app_data_dir_name)
 if(!fs.existsSync(app_data_dir)){
 	fs.mkdirSync(app_data_dir);

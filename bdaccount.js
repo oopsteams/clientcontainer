@@ -65,7 +65,7 @@ var code_action = function(args){
 	var result = args.code;
 	var acc_name = gparams.params.username;
 	var final_call = (json_obj)=>{
-		console.log('json_obj:', json_obj);
+		// console.log('json_obj:', json_obj);
 		console.log('bd_account.callback:', bd_account.callback);
 		self.close();
 		if(bd_account.callback){
@@ -90,7 +90,7 @@ var code_action = function(args){
 					var user_params = {"access_token": access_token}
 					service.bd_get(bd_user_point, user_params, {"User-Agent": "pan.baidu.com"}, (err, raw)=>{
 						var body = JSON.parse(raw);
-						console.log("user body:", body);
+						// console.log("user body:", body);
 						if(body){
 							body['refresh_token'] = refresh_token;
 							body['access_token'] = access_token;

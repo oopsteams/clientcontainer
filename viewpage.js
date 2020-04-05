@@ -11,7 +11,7 @@ var view_action = function(args){
 	}
 };
 var win_option = {
-	width:410, height:350,
+	width:600, height:600,
 	webPreferences:{'plugins': true},
 	onDestroy:function(win){
 		var self = this;
