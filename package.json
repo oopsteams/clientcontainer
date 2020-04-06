@@ -21,7 +21,8 @@
     "lowdb": "1.0.0",
     "request": "2.88.0",
     "sqlite3": "^4.1.0",
-    "tar": "^6.0.1"
+    "tar": "^6.0.1",
+    "compressing": "1.5.0"
   },
   "devDependencies": {
     "electron": "5.0.13",

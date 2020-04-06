@@ -19,7 +19,38 @@ const filter = {
 }
 // var base_dir = os.homedir();
 var base_dir = path.resolve(process.execPath, '..');
-var app_data_dir = path.join(base_dir, helpers.app_data_dir_name)
+function find_target_dir(_base_dir, target, contain){
+	var ep=_base_dir;
+	var rt_p = ep;
+	if(target){
+		var ep_split = ep.split(path.sep);
+		var l = ep_split.length;
+		var root_split = [];
+		var find_pos = -1;
+		for(var i=l;i>0;i--){
+			var idx = i-1;
+			var sec = ep_split[idx].toLowerCase();
+			if(sec.indexOf(target)>=0){
+				find_pos = idx;
+				break;
+			} else {
+				root_split.push(sec);
+			}
+		}
+		if(find_pos>0){
+			if(contain)find_pos = find_pos + 1;
+			root_split = ep_split.slice(0,find_pos);
+			rt_p = root_split.join(path.sep);
+		} else {
+			console.warn('target:', target, ',can not find it!');
+		}
+	}
+	console.log('find_target_dir:', rt_p);
+	return rt_p
+}
+var root_dir = find_target_dir(base_dir, app.getName(), false);
+var resources_dir = find_target_dir(__dirname, 'resources', true)
+var app_data_dir = path.join(root_dir, helpers.app_data_dir_name)
 if(!fs.existsSync(app_data_dir)){
 	fs.mkdirSync(app_data_dir);
 }
@@ -335,6 +366,7 @@ var default_cfg_items = [{'key':'platform', 'value': process.platform, 'name':'p
 							{'key':'sysversion', 'value': sysversion, 'name':'sysversion'},
 							{'key':'netdiskversion', 'value': netdiskversion, 'name':'netdiskversion'},
 							{'key':'app_data_dir', 'value': app_data_dir, 'name':'应用根目录'}, 
+							{'key':'resources_dir', 'value': resources_dir, 'name':'Res根目录'}, 
 							{'key':'data_dir', 'value': data_dir, 'name':'应用数据目录'},
 							{'key':'download_dir', 'value': download_dir, 'name':'应用资源下载目录'},
 							{'key':'patch_data_dir', 'value': patch_data_dir, 'name':'补丁下载目录'}
