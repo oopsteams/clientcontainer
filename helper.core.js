@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const tar = require('tar');
+const compressing = require('compressing');
 // const POINT = 'http://192.168.0.102:8080/';
 // const POINT = 'http://127.0.0.1:8080/';
 const POINT = 'http://111.229.193.232/';
@@ -507,11 +508,19 @@ var helpers = {
 		cb();
 	},
 	opengzip:function(zippath, target_dir, callback){
-		tar.x({
-			file: zippath,
-		  strip: 1,
-		  C: target_dir // alias for cwd:'some-dir', also ok
-		}).then(()=>{callback('ok')});
+		console.log('opengzip:', zippath, ',to target_dir:', target_dir);
+		compressing.zip.uncompress(zippath, target_dir).then(()=>{
+			callback(null, 'ok');
+		}).catch((err)=>{
+			callback(err, null);
+		});
+		
+		// tar.x({
+		// 	file: zippath,
+		// 	onwarn:function(code, msg, data){console.warn(code+":"+msg); callback(code, msg)},
+		//   strip: 0,
+		//   C: target_dir // alias for cwd:'some-dir', also ok
+		// }).then(()=>{callback(null, 'ok')});
 		
 	}
 };
