@@ -108,3 +108,4 @@ out/
 build/
 package-lock.json
 .oopsteam
+/res
