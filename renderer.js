@@ -1,5 +1,5 @@
 const { remote, ipcRenderer, shell} = require('electron');
-console.log('remote:',remote)
+// console.log('remote:',remote)
 if(remote){
 	var triggered_tags = {};
 	function send_message(payload){
