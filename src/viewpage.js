@@ -1,10 +1,10 @@
-const _cfg = require('electron-cfg');
+// const _cfg = require('electron-cfg');
 const Window = require('./window.js')
 const helpers = require("./helper.core.js")
 const Base = require("./base.js")
 var view_action = function(args){
 	var self = this;
-	cmd = args.cmd;
+	var cmd = args.cmd;
 	var inst = self.options.ctx;
 	if("sources" == cmd){
 		// self.send({'tag':'player', 'sources': vp.sources, 'cmd':args.cmd});
@@ -55,7 +55,8 @@ var viewpage = Base.extend({
 	init:function(){
 		var self = this;
 		if(!this.win){
-			this.win = new Window("ViewPage", "viewpagerenderer.js", `file://${__dirname}/viewer.html`,
+			var dir_name = this.cfg.get('dir_name');
+			this.win = new Window("ViewPage", "viewpagerenderer.js", `file://${dir_name}/viewer.html`,
 				this.account, {
 				'cookies':self.options.cookies,
 				'ctx':self,

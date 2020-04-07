@@ -1,9 +1,9 @@
-const {session} = require('electron');
+// const {session} = require('electron');
 const helpers = require("./helper.core.js")
 const Base = require("./base.js")
 const Dao = require('./dao.js')
-var path = require('path');
-const os =  require('os');
+// var path = require('path');
+// const os =  require('os');
 var cookies_db = new Dao({'type':'list', 'name':'cookies',
 'fields':[{name:"id", type:'VARCHAR', len:200},
 	{name:"name", type:'VARCHAR', len:120},
@@ -17,13 +17,13 @@ var cookies_db = new Dao({'type':'list', 'name':'cookies',
 	{name:"expirationDate", type:'INT'}
 	]
 });
-const cookie_cause={
-	'explicit':'Cookie由消费者的行为直接改变。',
-	'overwrite':'由于重写它的插入操作，cookie被自动删除。',
-	'expired':'Cookie在过期时自动删除。',
-	'evicted':'垃圾收集期间，Cookie被自动清除。',
-	'expired-overwrite':'cookie已被过期的过期日期覆盖。'
-};
+// const cookie_cause={
+// 	'explicit':'Cookie由消费者的行为直接改变。',
+// 	'overwrite':'由于重写它的插入操作，cookie被自动删除。',
+// 	'expired':'Cookie在过期时自动删除。',
+// 	'evicted':'垃圾收集期间，Cookie被自动清除。',
+// 	'expired-overwrite':'cookie已被过期的过期日期覆盖。'
+// };
 const fn_list = ['hostOnly', 'secure', 'httpOnly', 'session'];
 var cookies = Base.extend({
 	constructor:function(options){
@@ -106,7 +106,7 @@ var cookies = Base.extend({
 		return params;
 	},
 	del_cookie:function(cookie_obj, callback){
-		var self = this;
+		// var self = this;
 		if(cookie_obj){
 			var id = cookie_obj['name']+'_'+cookie_obj['domain'];
 			cookies_db.del('id', id, ()=>{
@@ -167,8 +167,6 @@ var cookies = Base.extend({
 				
 			} else if('expired-overwrite' == cause){//cookie已被过期的过期日期覆盖。
 				this.db_tasks.push(cookie);
-			} else {
-				
 			}
 			// console.log('changed:', cookie);
 			self.changed = true;

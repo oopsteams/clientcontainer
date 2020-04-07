@@ -2,10 +2,10 @@ const helpers = require("./helper.core.js")
 const request = require('request');
 const Base = require("./base.js")
 const Dao = require('./dao.js')
-const BdClient = require('./bd_client.js')
+// const BdClient = require('./bd_client.js')
 const BdAccount = require('./bdaccount.js')
-var path = require('path');
-const os =  require('os');
+// var path = require('path');
+// const os =  require('os');
 var accounts_db = new Dao({'type':'object', 'name':'accounts',
 'fields':[{name:"id", type:'VARCHAR', len:130},
 	{name:"default_save_path", type:'VARCHAR', len:512},
@@ -17,10 +17,10 @@ var accounts_db = new Dao({'type':'object', 'name':'accounts',
 });
 
 function call_pansite_by_post(point, path, params, callback){
-	var ithis = this;
+	// var ithis = this;
 	this.query_file_head_running = true;
-	headers = {"SURI-TOKEN": "login", "Content-Type": "application/x-www-form-urlencoded"};
-	var data = JSON.stringify(params);
+	var headers = {"SURI-TOKEN": "login", "Content-Type": "application/x-www-form-urlencoded"};
+	// var data = JSON.stringify(params);
 	var options = {
 		method: 'POST',
 		url: point + path,
@@ -39,37 +39,7 @@ function call_pansite_by_post(point, path, params, callback){
 			return;
 		}
 		callback(json_obj);
-		// need_renew_access_token = json_obj['need_renew_access_token'];
-		// auth_redirect = json_obj['auth'];
-		// token = json_obj['token'];
 		
-		// if(need_renew_access_token){
-		// 	pan_acc_list = json_obj.pan_acc_list;
-		// 	pan_acc_list.forEach((pa, idx)=>{pa['token'] = token});
-		// 	check_access.loop_check_accounts(token, point, pan_acc_list, auth_redirect, parent_win, (isok)=>{
-		// 		if(token){
-		// 			accounts_db.put({id: token, tm:helpers.now()}, (params)=>{
-		// 				callback(isok);
-		// 			});
-		// 		} else {
-		// 			if(!isok){
-		// 				api.check_state(point, parent_win, callback);
-		// 			} else {
-		// 				callback(isok);
-		// 			}
-		// 		}
-		// 	});
-			
-		// } else {
-		// 	if(token){
-		// 		// accounts_db.get('accounts').assign({token: token, tm:helpers.now()}).write();
-		// 		accounts_db.put({id: token, tm:helpers.now()}, (params)=>{
-		// 				callback(true);
-		// 			});
-		// 	} else {
-		// 		callback(true);
-		// 	}
-		// }
 	})
 }
 var account = Base.extend({
@@ -121,11 +91,11 @@ var account = Base.extend({
 		}
 		self.bdaccount.open((json_obj)=>{
 			if(json_obj){
-				token = json_obj['token'];
-				fuzzy_id = json_obj['id'];
-				login_at = json_obj['login_at']
-				username = json_obj['username'];
-				portrait = json_obj['portrait'];
+				var token = json_obj['token'];
+				var fuzzy_id = json_obj['id'];
+				var login_at = json_obj['login_at']
+				var username = json_obj['username'];
+				var portrait = json_obj['portrait'];
 				var final_call = ()=>{
 					if(token){
 						self.user = {id: token, tm:login_at, "username":username, "portrait":portrait, "fuzzy_id":fuzzy_id};
@@ -133,7 +103,7 @@ var account = Base.extend({
 						var msg = {'logined':true, 'id':fuzzy_id, 
 						'tk':self.user.id, 'username':self.user.username, 
 						'portrait':self.user.portrait, 'tm':helpers.now()};
-						accounts_db.put(self.user, (params)=>{
+						accounts_db.put(self.user, ()=>{
 								if(callback)callback(true, msg);
 							});
 					} else {
@@ -151,13 +121,13 @@ var account = Base.extend({
 		call_pansite_by_post(this.point, "login/", {"mobile_no": user.username, "password": user.pass}, function(res){
 			var json_obj = res;
 			if(json_obj){
-				need_renew_access_token = json_obj['need_renew_access_token'];
-				auth_redirect = json_obj['auth'];
-				token = json_obj['token'];
-				fuzzy_id = json_obj['id'];
-				login_at = json_obj['login_at']
-				username = json_obj['username'];
-				portrait = json_obj['portrait'];
+				// var need_renew_access_token = json_obj['need_renew_access_token'];
+				// var auth_redirect = json_obj['auth'];
+				var token = json_obj['token'];
+				var fuzzy_id = json_obj['id'];
+				var login_at = json_obj['login_at']
+				var username = json_obj['username'];
+				var portrait = json_obj['portrait'];
 				// console.log('json_obj:', json_obj);
 				var final_call = ()=>{
 					if(token){
@@ -166,7 +136,7 @@ var account = Base.extend({
 						var msg = {'logined':true, 'id':fuzzy_id, 
 						'tk':self.user.id, 'username':self.user.username, 
 						'portrait':self.user.portrait, 'tm':helpers.now()};
-						accounts_db.put(self.user, (params)=>{
+						accounts_db.put(self.user, ()=>{
 								callback(true, msg);
 							});
 					} else {

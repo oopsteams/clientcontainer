@@ -1,58 +1,62 @@
 const fs = require('fs');
 const path = require('path');
-const tar = require('tar');
+// const tar = require('tar');
 const compressing = require('compressing');
 // const POINT = 'http://192.168.0.102:8080/';
 // const POINT = 'http://127.0.0.1:8080/';
 const POINT = 'http://111.229.193.232/';
-const ERR_CODES_MAP = {1:'需要先登录!', 2:'参数错误!', 3:'未知错误!'};
+const ERR_CODES_MAP = {
+	1: '需要先登录!',
+	2: '参数错误!',
+	3: '未知错误!'
+};
 var helpers = {
-	point:POINT,
+	point: POINT,
 	// point:"https://www.oopsteam.site/",
-	points:[POINT, 'https://www.oopsteam.site/', 'http://www.oopsteam.site/', 'http://111.229.193.232:8080/'],
-	data_dir_name:".datas",
-	app_data_dir_name:".oopsteam",
-	download_dir_name:"download",
-	patch_dir_name:"patch",
-	log_dir_name:"logs",
-	common_user_agent:'pan.baidu.com',
-	devices:['pc-mac','macos1','cccone','levis','susy', 'win', 'win1'],
-	token_timeout:10*24*60*60*1000+1,
-	min_thread_num:3,
-	build_percentage:function (part_val, total){
-		var s = ''+Math.round((part_val/total) * 1000)/10;
-		if(s.length == 1){
-			s = ' '+s+'.0';
-		} else if(s.length == 2){
-			if(s.indexOf('.')>=0){
-				s = ' '+s;
+	points: [POINT, 'https://www.oopsteam.site/', 'http://www.oopsteam.site/', 'http://111.229.193.232:8080/'],
+	data_dir_name: ".datas",
+	app_data_dir_name: ".oopsteam",
+	download_dir_name: "download",
+	patch_dir_name: "patch",
+	log_dir_name: "logs",
+	common_user_agent: 'pan.baidu.com',
+	devices: ['pc-mac', 'macos1', 'cccone', 'levis', 'susy', 'win', 'win1'],
+	token_timeout: 10 * 24 * 60 * 60 * 1000 + 1,
+	min_thread_num: 3,
+	build_percentage: function(part_val, total) {
+		var s = '' + Math.round((part_val / total) * 1000) / 10;
+		if (s.length == 1) {
+			s = ' ' + s + '.0';
+		} else if (s.length == 2) {
+			if (s.indexOf('.') >= 0) {
+				s = ' ' + s;
 			} else {
-				s = s+'.0';
+				s = s + '.0';
 			}
 		}
-	  return s;
+		return s;
 	},
 	noop: function() {},
-	error_codes:function(code){
-		if(ERR_CODES_MAP.hasOwnProperty(code)){
+	error_codes: function(code) {
+		if (code in ERR_CODES_MAP) {
 			return ERR_CODES_MAP[code];
 		}
 		return ERR_CODES_MAP[3];
 	},
-	scale_size:function(get_size){
-	  var bit = 'B';
-	  var _size = get_size;
-	  if(_size>1024){
-	    _size = Math.round((_size/1024) * 10)/10;
-	    bit = 'K';
-	  } else {
-		_size = Math.round(_size * 10)/10;
-	  }
-	  if(_size>1024){
-	   _size = Math.round((_size/1024) * 10)/10;
-	   bit = 'M';
-	  }
-	  return _size + bit;
+	scale_size: function(get_size) {
+		var bit = 'B';
+		var _size = get_size;
+		if (_size > 1024) {
+			_size = Math.round((_size / 1024) * 10) / 10;
+			bit = 'K';
+		} else {
+			_size = Math.round(_size * 10) / 10;
+		}
+		if (_size > 1024) {
+			_size = Math.round((_size / 1024) * 10) / 10;
+			bit = 'M';
+		}
+		return _size + bit;
 	},
 	uid: (function() {
 		var id = 0;
@@ -191,7 +195,9 @@ var helpers = {
 		return target;
 	},
 	mergeIf: function(target, source) {
-		return helpers.merge(target, source, {merger: helpers._mergerIf});
+		return helpers.merge(target, source, {
+			merger: helpers._mergerIf
+		});
 	},
 	extend: Object.assign || function(target) {
 		return helpers.merge(target, [].slice.call(arguments, 1), {
@@ -202,14 +208,14 @@ var helpers = {
 	},
 	inherits: function(extensions) {
 		var me = this;
-		var BaseElement = (extensions && extensions.hasOwnProperty('constructor')) ? extensions.constructor : function() {
+		var BaseElement = (extensions && 'constructor' in extensions) ? extensions.constructor : function() {
 			return me.apply(this, arguments);
 		};
 
 		var Surrogate = function() {
 			this.constructor = BaseElement;
 		};
-		
+
 		Surrogate.prototype = me.prototype;
 		var sur_inst = new Surrogate();
 		BaseElement.prototype = sur_inst;
@@ -221,34 +227,34 @@ var helpers = {
 		BaseElement.__super__ = me.prototype;
 		return BaseElement;
 	},
-	now: function(){
+	now: function() {
 		return Date.now();
 	},
-	iterator:function(data_list, action, callback){
-		var final_call = (rs, idx)=>{
-			if(callback && typeof callback.call === 'function'){
-				Promise.resolve().then(()=>{
+	iterator: function(data_list, action, callback) {
+		var final_call = (rs, idx) => {
+			if (callback && typeof callback.call === 'function') {
+				Promise.resolve().then(() => {
 					callback(rs, idx);
 				});
 			}
 		};
-		if(!data_list || data_list.length == 0){
+		if (!data_list || data_list.length == 0) {
 			final_call(true, -1);
 			return;
 		}
-		var to_action = (pos)=>{
-			if(pos >= data_list.length){
+		var to_action = (pos) => {
+			if (pos >= data_list.length) {
 				final_call(true, pos);
 				return;
 			}
 			var item = data_list[pos];
-			if(action && typeof action.call === 'function'){
-				Promise.resolve().then(()=>{
-					action(item, pos, (comeon)=>{
-						if(comeon){
-							to_action(pos+1);
+			if (action && typeof action.call === 'function') {
+				Promise.resolve().then(() => {
+					action(item, pos, (comeon) => {
+						if (comeon) {
+							to_action(pos + 1);
 						} else {
-							final_call(pos==data_list.length-1, pos);
+							final_call(pos == data_list.length - 1, pos);
 						}
 					});
 				});
@@ -258,17 +264,17 @@ var helpers = {
 		};
 		to_action(0);
 	},
-	check_json_result: function(result, callback){
-		if(result.hasOwnProperty("result")){
-			rs = result["result"]
-			if(rs == "fail"){
-				if(result.hasOwnProperty("state")){
-					if(callback){
+	check_json_result: function(result, callback) {
+		if ("result" in result) {
+			var rs = result["result"]
+			if (rs == "fail") {
+				if ("state" in result) {
+					if (callback) {
 						callback(result["state"]);
 					}
 					return result["state"]
-				}else{
-					if(callback){
+				} else {
+					if (callback) {
 						callback(-9);
 					}
 					return -9;
@@ -277,91 +283,92 @@ var helpers = {
 		}
 		return 1;
 	},
-	looper: (function(){
-	  var _t = null;
-	  var _all_listeners={};
-	  var raf_tm = 0;
-	  var raf = null;
-	  var caf = null;
-	  var clearRunningProcess = function(){
-		if(raf){
-			if(_t && caf)caf(_t);
-		} else {
-			if(_t)clearTimeout(_t);
+	looper: (function() {
+		var _t = null;
+		var _all_listeners = {};
+		var raf_tm = 0;
+		var raf = null;
+		var caf = null;
+		var clearRunningProcess = function() {
+			if (raf) {
+				if (_t && caf) caf(_t);
+			} else {
+				if (_t) clearTimeout(_t);
+			}
+		};
+		if (caf) {
+			console.log('use requestAnimationFrame!!!!!!!!!!!!!!!');
 		}
-	  };
-	  if(caf){
-		  console.log('use requestAnimationFrame!!!!!!!!!!!!!!!');
-	  }
-	  var delayRun = function(fn, delay){
-		clearRunningProcess();
-		if(raf){
-			raf_tm = Date.now();
-			function animation(){
-				_t = raf(function(){
-					if(Date.now() - raf_tm >= delay){
-						fn();
-					} else {
-					  animation();
-					}
-				})
-			}
-			if(_looper.running){
-				animation();
-			}
-		} else {
-			if(_looper.running){
-				_t = setTimeout(fn, delay);
+		var delayRun = function(fn, delay) {
+			clearRunningProcess();
+			if (raf) {
+				raf_tm = Date.now();
+				var animation = function(){
+					_t = raf(function() {
+						if (Date.now() - raf_tm >= delay) {
+							fn();
+						} else {
+							animation();
+						}
+					})
+				}
+				if (_looper.running) {
+					animation();
+				}
+			} else {
+				if (_looper.running) {
+					_t = setTimeout(fn, delay);
+				}
 			}
 		}
-	  }
-	  function runner(){
-	    var will_del = [];
-	    for(var uid in _all_listeners){
-	      var cb = _all_listeners[uid][0];
-	      var _params = _all_listeners[uid][1];
-	      if(cb(_params)){
-	        will_del.push(uid);
-	      }
-	    }
-	    for(var i=0;i<will_del.length;i++){
-	      delete _all_listeners[will_del[i]];
-	    }
-	    if(_looper.running){
-			delayRun(runner, 1000);
-	    }
-	  }
-	  var _looper = {
-	    running:false,
-	    stop:function(){
-	      _looper.running=false;
-		  clearRunningProcess();
-		  _t = null;
-	    },
-	    start:function(){
-	      if(!_looper.running){
-	        _looper.running = true;
-			delayRun(runner, 1000);
-	      }
-	    },
-	    removeListener:function(uid){
-	      if(_all_listeners.hasOwnProperty(uid)){
-	        delete _all_listeners[uid];
-	      }
-	    },
-	    addListener:function(uid, callback, params){
-	      _all_listeners[uid] = [callback, params];
-	    }
-	  };
-	  return _looper;
+
+		function runner() {
+			var will_del = [];
+			for (var uid in _all_listeners) {
+				var cb = _all_listeners[uid][0];
+				var _params = _all_listeners[uid][1];
+				if (cb(_params)) {
+					will_del.push(uid);
+				}
+			}
+			for (var i = 0; i < will_del.length; i++) {
+				delete _all_listeners[will_del[i]];
+			}
+			if (_looper.running) {
+				delayRun(runner, 1000);
+			}
+		}
+		var _looper = {
+			running: false,
+			stop: function() {
+				_looper.running = false;
+				clearRunningProcess();
+				_t = null;
+			},
+			start: function() {
+				if (!_looper.running) {
+					_looper.running = true;
+					delayRun(runner, 1000);
+				}
+			},
+			removeListener: function(uid) {
+				if (uid in _all_listeners) {
+					delete _all_listeners[uid];
+				}
+			},
+			addListener: function(uid, callback, params) {
+				_all_listeners[uid] = [callback, params];
+			}
+		};
+		return _looper;
 	})(),
-	remove_dir:function(dir_path){
+	remove_dir: function(dir_path) {
 		var files = [];
-		if(fs.existsSync(dir_path)){
+		if (fs.existsSync(dir_path)) {
 			files = fs.readdirSync(dir_path);
-			files.forEach((file, idx)=>{
+			files.forEach((file, idx) => {
 				var cpath = path.join(dir_path, file);
-				if(fs.statSync(cpath).isDirectory()){
+				if (fs.statSync(cpath).isDirectory()) {
 					helpers.remove_dir(cpath);
 				} else {
 					fs.unlinkSync(cpath);
@@ -370,40 +377,43 @@ var helpers = {
 			fs.rmdirSync(dir_path);
 		}
 	},
-	append_merge_files:function(files, final_file, callback){
+	append_merge_files: function(files, final_file, callback) {
 		// var _files = JSON.parse(JSON.stringify(files));
-		if(files.length == 1){
-			fs.rename(files[0], final_file, (err)=>{
+		if (files.length == 1) {
+			fs.rename(files[0], final_file, (err) => {
 				callback(err);
 			});
 			return;
 		}
-		if(files.length == 0){
+		if (files.length == 0) {
 			return;
 		}
-	  target_fs = fs.createWriteStream(final_file);
-	  function cb(){
-	    if(!files.length){
-	      target_fs.end();
-	      callback(null);
-	      return;
-	    }
-	    stream = fs.createReadStream(files.shift());
-	    stream.pipe(target_fs, {end: false});
-	    stream.on("end", function(){
-	      cb();
-	    });
-	  }
-	  cb();
+		var target_fs = fs.createWriteStream(final_file);
+
+		function cb() {
+			if (!files.length) {
+				target_fs.end();
+				callback(null);
+				return;
+			}
+			var stream = fs.createReadStream(files.shift());
+			stream.pipe(target_fs, {
+				end: false
+			});
+			stream.on("end", function() {
+				cb();
+			});
+		}
+		cb();
 	},
-	file_rename:function(origin_file_path, new_file_path, on_exists_bak, cb){
-		if(fs.existsSync(origin_file_path)){
-			if(fs.existsSync(new_file_path)){
-				if(on_exists_bak){
+	file_rename: function(origin_file_path, new_file_path, on_exists_bak, cb) {
+		if (fs.existsSync(origin_file_path)) {
+			if (fs.existsSync(new_file_path)) {
+				if (on_exists_bak) {
 					var bak_suffix = on_exists_bak();
-					if(bak_suffix){
+					if (bak_suffix) {
 						var bak_path = path.join(new_file_path, bak_suffix);
-						self.file_rename(new_file_path, bak_path);
+						helpers.file_rename(new_file_path, bak_path);
 					} else {
 						fs.unlinkSync(new_file_path);
 					}
@@ -411,28 +421,29 @@ var helpers = {
 					fs.unlinkSync(new_file_path);
 				}
 			}
-			fs.rename(origin_file_path, new_file_path, (err)=>{
-				if(err){
+			fs.rename(origin_file_path, new_file_path, (err) => {
+				if (err) {
 					throw err;
 				}
-				if(cb){
+				if (cb) {
 					cb();
 				}
 			});
 		} else {
-			throw "["+origin_file_path+"] not exists!";
+			throw "[" + origin_file_path + "] not exists!";
 		}
 	},
-	copy_files_skip_size:function(files, final_file, skip, callback){
+	copy_files_skip_size: function(files, final_file, skip, callback) {
 		var self = this;
-		if(files.length == 0){
+		if (files.length == 0) {
 			return;
 		}
-		var start_pos = 0, end_pos = 0;
-		if(skip>0){
+		var start_pos = 0,
+			end_pos = 0;
+		if (skip > 0) {
 			var l = 0;
-			files.forEach((f, idx)=>{
-				if(fs.existsSync(f)){
+			files.forEach((f, idx) => {
+				if (fs.existsSync(f)) {
 					var stat = fs.statSync(f);
 					l += stat.size;
 				}
@@ -441,38 +452,39 @@ var helpers = {
 		}
 		self.copy_files_by_range(files, final_file, start_pos, end_pos, callback);
 	},
-	copy_files_by_range:function(files, final_file, start, end, callback){
-		if(files.length == 0){
-			if(callback)callback();
+	copy_files_by_range: function(files, final_file, start, end, callback) {
+		if (files.length == 0) {
+			if (callback) callback();
 			return;
 		}
-		var _s = start, _e = end;
+		var _s = start,
+			_e = end;
 		var _f_options = {};
 		var _files = [];
 		var l = 0;
-		files.forEach((f, idx)=>{
+		files.forEach((f, idx) => {
 			_f_options[f] = {};
 			var need_push = true;
 			var stat = fs.statSync(f);
 			var _f_size = stat.size;
-			if(_s>0){
-				if(stat.size>_s){
-				  _f_options[f]['start'] = _s;
-				  _s = 0;
-				  _files.push(f);
-				  _f_size = stat.size - _s;
-				}else{
+			if (_s > 0) {
+				if (stat.size > _s) {
+					_f_options[f]['start'] = _s;
+					_s = 0;
+					_files.push(f);
+					_f_size = stat.size - _s;
+				} else {
 					_f_size = 0;
 					_s -= stat.size;
 					need_push = false;
 				}
 			}
-			if(_e > 0){
-				if(l + stat.size - 1 <= _e){
+			if (_e > 0) {
+				if (l + stat.size - 1 <= _e) {
 					l += stat.size;
 				} else {
 					var skip_end = l + stat.size - 1 - _e;
-					if(skip_end > 0){
+					if (skip_end > 0) {
 						_f_options[f]['end'] = stat.size - skip_end - 1;
 						l = _e + 1;
 					} else {
@@ -480,48 +492,53 @@ var helpers = {
 					}
 				}
 			}
-			if(need_push){
+			if (need_push) {
 				_files.push(f);
 			}
 		});
-		target_fs = fs.createWriteStream(final_file);
+		var target_fs = fs.createWriteStream(final_file);
 		var pos = 0;
-		var read_stream_options = {start:0};
-		function cb(){
-		  if(!_files.length){
-		    target_fs.end();
-		    if(callback)callback();
-		    return;
-		  }
-		  var ori_file = _files.shift();
-		  if(_f_options.hasOwnProperty(ori_file)){
-			  var _f_opt = _f_options[ori_file];
-			  helpers.extend(read_stream_options, _f_opt);
-			  console.log('new stream_options:', read_stream_options);
-		  }
-		  stream = fs.createReadStream(ori_file, read_stream_options);
-		  stream.pipe(target_fs, {end:false});
-		  stream.on("end", function(){
-		    cb();
-		  });
+		var read_stream_options = {
+			start: 0
+		};
+
+		function cb() {
+			if (!_files.length) {
+				target_fs.end();
+				if (callback) callback();
+				return;
+			}
+			var ori_file = _files.shift();
+			if (ori_file in _f_options) {
+				var _f_opt = _f_options[ori_file];
+				helpers.extend(read_stream_options, _f_opt);
+				console.log('new stream_options:', read_stream_options);
+			}
+			var stream = fs.createReadStream(ori_file, read_stream_options);
+			stream.pipe(target_fs, {
+				end: false
+			});
+			stream.on("end", function() {
+				cb();
+			});
 		}
 		cb();
 	},
-	opengzip:function(zippath, target_dir, callback){
+	opengzip: function(zippath, target_dir, callback) {
 		console.log('opengzip:', zippath, ',to target_dir:', target_dir);
-		compressing.zip.uncompress(zippath, target_dir).then(()=>{
+		compressing.zip.uncompress(zippath, target_dir).then(() => {
 			callback(null, 'ok');
-		}).catch((err)=>{
+		}).catch((err) => {
 			callback(err, null);
 		});
-		
+
 		// tar.x({
 		// 	file: zippath,
 		// 	onwarn:function(code, msg, data){console.warn(code+":"+msg); callback(code, msg)},
 		//   strip: 0,
 		//   C: target_dir // alias for cwd:'some-dir', also ok
 		// }).then(()=>{callback(null, 'ok')});
-		
+
 	}
 };
 module.exports = helpers;

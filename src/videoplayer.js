@@ -3,7 +3,7 @@ const helpers = require("./helper.core.js")
 const Base = require("./base.js")
 var player_action = function(args){
 	var self = this;
-	cmd = args.cmd;
+	var cmd = args.cmd;
 	var vp = self.options.ctx;
 	if("sources" == cmd){
 		self.send({'tag':'player', 'sources': vp.sources, 'cmd':args.cmd});
@@ -44,7 +44,8 @@ var videoplayer = Base.extend({
 	init:function(){
 		var self = this;
 		if(!this.win){
-			this.win = new Window("VideoPlayer", "videorenderer.js", `file://${__dirname}/player.html`,
+			var dir_name = this.cfg.get('dir_name');
+			this.win = new Window("VideoPlayer", "videorenderer.js", `file://${dir_name}/player.html`,
 				this.account, {
 				'ctx':self,
 				'cfg': self.cfg,

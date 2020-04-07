@@ -3,7 +3,7 @@ const helpers = require("./helper.core.js")
 const Base = require("./base.js")
 var shared_action = function(args){
 	var self = this;
-	cmd = args.cmd;
+	var cmd = args.cmd;
 	var shared = self.options.ctx;
 	if("uiok" == cmd){
 		if(shared.callback){
@@ -31,8 +31,6 @@ var win_option = {
 			});
 		} else if("started" == tag){
 			
-		} else if("player" == tag){
-			player_action.apply(self, [args]);
 		} else if("ui_ready" == tag){
 			shared_action.apply(self, [args]);
 		}
@@ -52,7 +50,8 @@ var shared = Base.extend({
 	init:function(){
 		var self = this;
 		if(!this.win){
-			var load_url = `file://${__dirname}/bdpage.html`;
+			var dir_name = this.cfg.get('dir_name');
+			var load_url = `file://${dir_name}/bdpage.html`;
 			this.win = new Window("BdShared", "sharerenderer.js", load_url,
 				this.account, {
 				'cookies':self.options.cookies,
