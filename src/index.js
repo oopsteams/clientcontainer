@@ -611,7 +611,7 @@ app.on('ready', () => {
 					sharewin.init();
 					viewpage.init();
 					var index_addr = cfg.get('index');
-					console.log('cfg index_addr:',index_addr);
+					console.log('cfg get index_addr:',index_addr);
 					if (!index_addr || index_addr.length == 0) index_addr = '/dist/index.html';
 					var index_file_path = `${patch_data_dir}${index_addr}`;
 					if (!fs.existsSync(index_file_path)) {
