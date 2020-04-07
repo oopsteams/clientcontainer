@@ -18,6 +18,12 @@ module.exports = {
 			){
 				return true;
 			}
+			if(path.indexOf('sqlite3/build/Release/obj/')>0){
+				return true;
+			}
+			if(path.indexOf('sqlite3/bin/')>0){
+				return true;
+			}
 			if(path.match(/^\/yarn[^\.]+\.log$/)){
 				return true;
 			}
