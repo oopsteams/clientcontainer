@@ -30,6 +30,9 @@ module.exports = {
 			if(path.match(/^\/[^\.]+\.sh/)){
 				return true;
 			}
+			if(path.match(/^\/[^\.]+\.bat/)){
+				return true;
+			}
 			if(path.match(/.*.md|LICENSE|.oopsteam|.eslintrc.js|DS_Store/i)){
 				return true;
 			}

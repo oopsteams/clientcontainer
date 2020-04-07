@@ -156,9 +156,9 @@ var appcfg = Base.extend({
 	},
 	check_upgrade: function(callback) {
 		var self = this;
-		// self.check_resource_upgrade(()=>{
-		// 	console.log('check_resource_upgrade over.');
-		// });
+		self.check_resource_upgrade(()=>{
+			console.log('check_resource_upgrade over.');
+		});
 		var c_dir = this.base_dir;
 		var old_ver_val = self.get('old_version');
 		var new_ver_val = self.get('version');
@@ -306,25 +306,36 @@ var appcfg = Base.extend({
 					helpers.opengzip(new_prod_dir_lib, tmp_unzip_dir, (err, rs) => {
 						console.log('opengzip rs:', rs, ',err:', err);
 						if (err) {
-							// fs.unlinkSync(new_prod_dir_lib);
+							fs.unlinkSync(new_prod_dir_lib);
 							final_call();
 						} else {
-							var target_fp = path.join(tmp_unzip_dir, 'resources/app.asar.zip');
-							var target_ori_fp = path.join(tmp_unzip_dir, 'resources/app.asar');
+							var target_fp = path.join(tmp_unzip_dir, 'res/index.js');
+							var target_ori_fp = path.join(tmp_unzip_dir, 'res/');
 							console.log('target_fp:', target_fp);
 							if (fs.existsSync(target_fp)) {
 								var resources_dir = self.get('resources_dir');
+								resources_dir = path.join(resources_dir, 'app');
 								console.log('will move file to :', resources_dir);
-								helpers.file_rename(target_fp, target_ori_fp, false, () => {
-									if (fs.existsSync(target_ori_fp)) {
-										process.on('exit', (code) => {
-											// if (code == 0) {
-
-											// }
-											require('child_process').spawnSync('cp', ['-rf', target_ori_fp, resources_dir]);
-											console.log('cp ok!');
-										});
-									}
+								process.on('exit', (code) => {
+									// if (code == 0) {
+																
+									// }
+									var f_list = fs.readdirSync(target_ori_fp);
+									var src_cmd_list = ['-rf'];
+									var src_cmd_list = [];
+									f_list.forEach((f, idx)=>{
+										src_cmd_list.push(path.join(target_ori_fp, f))
+									});
+									src_cmd_list.push(resources_dir)
+									
+									var cp = require('child_process');
+									cp.spawnSync('cp', src_cmd_list);
+									// src_cmd_list.forEach((s, idx)=>{
+									// 	var spawn_cmd = ['-rf', s, resources_dir];
+									// 	console.log('cp cmd:', spawn_cmd);
+									// 	cp.spawnSync('cp', spawn_cmd);
+									// });
+									console.log('cp ok!');
 								});
 
 								// fs.renameSync(path.join(tmp_unzip_dir, 'prod'), new_prod_dir);
@@ -412,7 +423,7 @@ var appcfg = Base.extend({
 	},
 	_sync: function(callback) {
 		var self = this;
-		console.log('更新后丢失!!!!!');
+		// console.log('更新后丢失!!!!!');
 		var v = self.get(CFG_SYNC_TM);
 		if (!v) v = 0;
 		var final_call = () => {
