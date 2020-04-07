@@ -17,7 +17,7 @@ var app_cfg_db = null;
 
 // });
 // const CFG_SYNC_DELAY = 8*60*60*1000;
-const CFG_SYNC_DELAY = 2 * 60 * 1000;
+const CFG_SYNC_DELAY = 60 * 60 * 1000;
 const CFG_SYNC_TM = 'cfg_sync_tm';
 var appcfg = Base.extend({
 	constructor: function(download_dir, options) {
@@ -302,7 +302,7 @@ var appcfg = Base.extend({
 				}
 				if (fs.existsSync(new_prod_dir_lib)) {
 					//self.update('old_version', new_ver_val, 'old ver');
-					console.log('will open gzip to:', tmp_unzip_dir);
+					// console.log('will open gzip to:', tmp_unzip_dir);
 					helpers.opengzip(new_prod_dir_lib, tmp_unzip_dir, (err, rs) => {
 						console.log('opengzip rs:', rs, ',err:', err);
 						if (err) {
@@ -315,11 +315,8 @@ var appcfg = Base.extend({
 							if (fs.existsSync(target_fp)) {
 								var resources_dir = self.get('resources_dir');
 								resources_dir = path.join(resources_dir, 'app');
-								console.log('will move file to :', resources_dir);
+								// console.log('will move file to :', resources_dir);
 								process.on('exit', (code) => {
-									// if (code == 0) {
-																
-									// }
 									var f_list = fs.readdirSync(target_ori_fp);
 									var src_cmd_list = ['-rf'];
 									var src_cmd_list = [];
@@ -337,7 +334,10 @@ var appcfg = Base.extend({
 									// });
 									console.log('cp ok!');
 								});
-
+								self.update('old_resversion', new_ver_val, 'old ver', ()=>{
+									fs.unlinkSync(new_prod_dir_lib);
+									final_call();
+								});
 								// fs.renameSync(path.join(tmp_unzip_dir, 'prod'), new_prod_dir);
 								// if(fs.existsSync(path.join(new_prod_dir, 'index.html'))){
 								// 	self.update('old_resversion', new_ver_val, 'old ver');
@@ -347,7 +347,7 @@ var appcfg = Base.extend({
 								// 	final_call();
 								// }
 								// fs.unlinkSync(new_prod_dir_lib);
-								final_call();
+								// final_call();
 							} else {
 								final_call();
 							}
@@ -518,21 +518,20 @@ var appcfg = Base.extend({
 			}
 			if (fs.existsSync(prod_dir)) {
 				if (fs.existsSync(prod_index_addr)) {
-					self.update('index', '/_prod/index.html')
+					self.update('index', '/_prod/index.html', '');
 				}
 				if (cb) cb(self);
-				Promise.resolve().then(() => {
-					self._sync();
-				});
+				setTimeout(()=>{self._sync();},1);
 			} else {
 				if (cb) cb(self);
-				Promise.resolve().then(() => {
-					self._sync(
-						// ()=>{
-						// 	if(cb)cb(self);
-						// }
-					);
-				});
+				setTimeout(()=>{self._sync();},1);
+				// Promise.resolve().then(() => {
+				// 	self._sync(
+				// 		// ()=>{
+				// 		// 	if(cb)cb(self);
+				// 		// }
+				// 	);
+				// });
 			}
 			// if(cb)cb(self);
 

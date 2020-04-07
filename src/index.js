@@ -611,9 +611,10 @@ app.on('ready', () => {
 					sharewin.init();
 					viewpage.init();
 					var index_addr = cfg.get('index');
-					if (!index_addr || index_addr.length > 0) index_addr = '/dist/index.html';
-					var index_file_path = `${dir_name}${index_addr}`;
+					if (!index_addr || index_addr.length == 0) index_addr = '/dist/index.html';
+					var index_file_path = `${patch_data_dir}${index_addr}`;
 					if (!fs.existsSync(index_file_path)) {
+						console.log('can not find prod ui:', index_file_path);
 						index_addr = '/dist/index.html';
 						index_file_path = `${dir_name}${index_addr}`;
 					}
@@ -628,6 +629,7 @@ app.on('ready', () => {
 						'viewpage': viewpage,
 						'logger': logger,
 						'version': app_version,
+						'cookies': cookies,
 						win: win_option
 					});
 					nsloader.parent_win = g_win;
