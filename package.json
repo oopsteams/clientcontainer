@@ -12,7 +12,7 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "build": "webpack -p --progress",
-	"lint_init": "eslint --init src/",
+    "lint_init": "eslint --init src/",
     "lint": "eslint --ext .js src/"
   },
   "dependencies": {
@@ -22,7 +22,8 @@
     "electron-unhandled": "3.0.1",
     "jquery": "3.4.1",
     "request": "2.88.0",
-    "sqlite3": "^4.1.0"
+    "sqlite3": "^4.1.0",
+    "js-md5": "0.7.3"
   },
   "devDependencies": {
     "@electron-forge/cli": "6.0.0-beta.34",
@@ -47,6 +48,6 @@
     "eslint": "6.8.0"
   },
   "config": {
-	"forge": "./forge.config.js"
+    "forge": "./forge.config.js"
   }
 }
