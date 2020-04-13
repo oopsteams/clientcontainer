@@ -4,7 +4,7 @@
   "description": "资源客户端",
   "keywords": [],
   "main": "./index.js",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": "susy",
   "scripts": {
     "start": "electron-forge start",
