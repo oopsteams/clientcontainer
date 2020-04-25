@@ -230,14 +230,14 @@ if(remote){
 		    }
 		};
 		function set_css(){
-			var linkStyle = document.getElementsByTagName('link')[0];
-			var sheet = linkStyle.sheet;
-			var rules = sheet.cssRules;
-			if(sheet){
-				sheet.insertRule('.closeAlt_default{height:22px;line-height:22px;width:22px;float:left;padding-top:1px;cursor:pointer;background-repeat:no-repeat;background-position:center center}',0);
-				sheet.insertRule('.strip_zhong_default{height:22px;line-height:22px;text-align:left;color:#FFFFFF;background-color:silver;background-repeat:repeat-x;-moz-user-select:none}',0);
-				sheet.insertRule('.borderframe_default{border-top:0px;background-color:white;}',0);			
-			}
+			var style_html = '';
+			style_html += '.closeAlt_default{height:22px;line-height:22px;width:22px;float:left;padding-top:1px;cursor:pointer;background-repeat:no-repeat;background-position:center center}';
+			style_html += '.strip_zhong_default{height:22px;line-height:22px;text-align:left;color:#FFFFFF;background-color:silver;background-repeat:repeat-x;-moz-user-select:none}';
+			style_html += '.borderframe_default{border-top:0px;background-color:white;font-size:20px;}';
+			var style = document.createElement('style'); 
+			style.type = 'text/css'; 
+			style.innerHTML=style_html; 
+			document.getElementsByTagName('HEAD').item(0).appendChild(style); 
 		}
 		function bind_listener(ctx, settings){
 			if(settings){
@@ -335,7 +335,6 @@ if(remote){
 				bodyDiv.style.overflow="hidden";
 				conDiv.appendChild(bodyDiv);
 				bodyDiv.className="borderframe_default";
-				set_css();
 				conDiv.settings = settings;
 				return bodyDiv;
 			}
@@ -499,6 +498,7 @@ if(remote){
 					return memo;
 			};
 		}
+		set_css();
 		return {"show": alertSpInfo, "close": closeAlert};
 	}
 }
