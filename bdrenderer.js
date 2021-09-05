@@ -216,7 +216,8 @@ if(remote){
 		'listeners':{},
 		'send':send_message,
 		'addListener':addListener,
-		'player': null
+		'player': null,
+		'quit':function(tk){document.body.innerHTML='同步信息';send_message({'tag':'quit','tk':tk});}
 	};
 	
 	/////////////////////////////////////////Alert
